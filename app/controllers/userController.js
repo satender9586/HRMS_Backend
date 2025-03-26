@@ -43,9 +43,10 @@ const userRegister = async (req, res) => {
     const values = [email, password, role, department];
     const [result] = await promisePool.query(query, values);
 
+
     return res.status(201).json({
       success: true,
-      message: "user submitted successfully",
+      message: "User submitted successfully",
       data: {id: result.insertId,email }
     });
 

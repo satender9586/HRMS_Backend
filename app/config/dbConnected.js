@@ -1,5 +1,5 @@
 const mysql = require("mysql2");
-const { dbCreatQuery, usersCreateQuery,departmentTableCreateQuery,roleTableCreateQuery } = require("../helper/dbQueries.js");
+const { dbCreatQuery, usersCreateQuery,departmentTableCreateQuery,roleTableCreateQuery,attendenceTableCreateQuery } = require("../helper/dbQueries.js");
 const {departmentInsertQuery,roleInsertQuery} = require("../helper/insertQueries.js")
 
 const pool = mysql.createPool({
@@ -45,6 +45,7 @@ async function funDb() {
     await queryAsync(roleTableCreateQuery);
     // await queryAsync(roleInsertQuery);
     await queryAsync(usersCreateQuery);
+    await queryAsync(attendenceTableCreateQuery);
   
 
   } catch (error) {

@@ -7,6 +7,7 @@ const colors = require('colors');
 const app = express();
 const { funDb } = require("./app/config/dbConnected.js")
 const  userRoutes = require("./app/routes/userRoutes.js")
+const  attendenceRoutes =  require("./app/routes/attendenceRoutes.js")
 const errorHandler = require("./app/middleware/errorHandler.js")
 
 // database
@@ -19,6 +20,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev')); 
 app.use(errorHandler)
 app.use("/api/v1/auth",userRoutes)
+app.use("/api/v1/attendence",attendenceRoutes)
 
 
 
