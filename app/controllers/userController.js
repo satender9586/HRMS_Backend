@@ -38,11 +38,7 @@ const userRegister = async (req, res) => {
         message: "Email already exists!",
       });
     }
-
-    const query = `INSERT INTO users (email, password, role,department) VALUES (?, ?, ?, ?)`;
-    const values = [email, password, role, department];
-    const [result] = await promisePool.query(query, values);
-
+ 
 
     return res.status(201).json({
       success: true,
