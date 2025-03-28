@@ -59,7 +59,7 @@ const punchIn = async (req, res) => {
 
     // Insert new punch-in record
     const punchInQuery =
-      "INSERT INTO attendence(users_id, punch_in) VALUES(?, CURRENT_TIME)";
+      "INSERT INTO attendence(users_id,punch_date, punch_in) VALUES(?,CURRENT_TIME, CURRENT_TIME)";
     const inputData = [users_id];
 
     const [queryResponse] = await promisePool.query(punchInQuery, inputData);
@@ -146,12 +146,9 @@ const retrivePuncingstatus = async (req, res) => {
     const startOfDay = new Date(currentDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(currentDate.setHours(23, 59, 59, 999));
 
-    const isAttendanceExists ="SELECT * FROM attendence WHERE users_id = ? AND date BETWEEN ? AND ?";
+    const isAttendanceExists ="SELECT * FROM attendence WHERE users_id = ? AND punch_date BETWEEN ? AND ?";
 
-    const [runAttendanceGetQuery] = await promisePool.query(
-      isAttendanceExists,
-      [usersId, startOfDay, endOfDay]
-    );
+    const [runAttendanceGetQuery] = await promisePool.query(isAttendanceExists,[usersId, startOfDay, endOfDay]   );
 
     if (runAttendanceGetQuery.length === 0) {
       return res.status(404).json({

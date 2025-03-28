@@ -30,7 +30,7 @@ const usersCreateQuery = `CREATE TABLE IF NOT EXISTS users (
 const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   attendance_id INT PRIMARY KEY AUTO_INCREMENT,
   users_id INT,
-  date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,                                      
+  punch_date DATE,                                      
   punch_in TIME,   
   punch_out TIME, 
   hours_worked DECIMAL(5,2), 
@@ -38,13 +38,37 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   leave_type ENUM('Sick Leave', 'Casual Leave'),                                      
   notes TEXT,
   FOREIGN KEY (users_id) REFERENCES users(user_id)
+  
 )`;
 
+const leavesTablesQuery = `CREATE TABLE IF NOT EXISTS leaves(
+  leave_id INT PRIMARY KEY AUTO_INCREMENT,
+  leave_name VARCHAR(255) NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)`;
+
+const usersLeavesTablesQuery = `CREATE TABLE IF NOT EXISTS employeesLeaves(
+  leave_id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  leave_date DATE NOT NULL,
+  leave_start DATE NOT NULL,
+  Leave_end DATE NOT NULL,
+  leave_type ENUM('Sick', 'Vacation', 'Unpaid') NOT NULL, 
+  leave_reason VARCHAR(100),
+  status ENUM('Approved', 'Pending', 'Rejected') DEFAULT 'Pending',
+  FOREIGN KEY (user_id) REFERENCES users(user_id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)`;
 
 module.exports = {
   dbCreatQuery,
   usersCreateQuery,
   departmentTableCreateQuery,
   roleTableCreateQuery,
-  attendenceTableCreateQuery
+  attendenceTableCreateQuery,
+  leavesTablesQuery,
+  usersLeavesTablesQuery,
 };
