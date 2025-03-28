@@ -31,11 +31,11 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   attendance_id INT PRIMARY KEY AUTO_INCREMENT,
   users_id INT,
   date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,                                      
-  status ENUM('Present', 'Absent', 'Leave') DEFAULT 'Absent',
+  punch_in TIME,   
+  punch_out TIME, 
   hours_worked DECIMAL(5,2), 
-  leave_type ENUM('Sick Leave', 'Casual Leave'),     
-  punch_in TIMESTAMP DEFAULT CURRENT_TIMESTAMP,   
-  punch_out Date,                                  
+  status ENUM('Present', 'Absent', 'Leave') DEFAULT 'Absent',
+  leave_type ENUM('Sick Leave', 'Casual Leave'),                                      
   notes TEXT,
   FOREIGN KEY (users_id) REFERENCES users(user_id)
 )`;
