@@ -38,8 +38,8 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   leave_type ENUM('Sick Leave', 'Casual Leave'),                                      
   notes TEXT,
   FOREIGN KEY (users_id) REFERENCES users(user_id)
-  
-)`;
+
+  )`;
 
 const leavesTablesQuery = `CREATE TABLE IF NOT EXISTS leaves(
   leave_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -50,17 +50,21 @@ const leavesTablesQuery = `CREATE TABLE IF NOT EXISTS leaves(
 )`;
 
 const usersLeavesTablesQuery = `CREATE TABLE IF NOT EXISTS employeesLeaves(
-  leave_id INT PRIMARY KEY AUTO_INCREMENT,
-  user_id INT NOT NULL,
-  leave_date DATE NOT NULL,
-  leave_start DATE NOT NULL,
-  Leave_end DATE NOT NULL,
-  leave_type ENUM('Sick', 'Vacation', 'Unpaid') NOT NULL, 
-  leave_reason VARCHAR(100),
-  status ENUM('Approved', 'Pending', 'Rejected') DEFAULT 'Pending',
-  FOREIGN KEY (user_id) REFERENCES users(user_id),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    leave_id INT AUTO_INCREMENT PRIMARY KEY,            
+    users_id INT,                                
+    leave_type ENUM('sick', 'vacation', 'personal', 'emergency', 'maternity', 'paternity', 'compensatory','unpaid') ,
+    start_date DATE NOT NULL,                           
+    end_date DATE NOT NULL,                           
+    status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
+    request_date DATETIME DEFAULT CURRENT_TIMESTAMP,    
+    approval_date DATETIME,                              
+    rejected_date DATETIME,                              
+    approved_by INT,                                    
+    rejected_by INT,                                    
+    reason TEXT,                                         
+    FOREIGN KEY (users_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (rejected_by) REFERENCES users(user_id) ON DELETE SET NULL
 )`;
 
 module.exports = {
