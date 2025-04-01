@@ -53,18 +53,16 @@ const usersLeavesTablesQuery = `CREATE TABLE IF NOT EXISTS employeesLeaves(
     leave_id INT AUTO_INCREMENT PRIMARY KEY,            
     users_id INT,                                
     leave_type ENUM('sick', 'vacation', 'personal', 'emergency', 'maternity', 'paternity', 'compensatory','unpaid') ,
+    description VARCHAR(255),
     start_date DATE NOT NULL,                           
     end_date DATE NOT NULL,                           
     status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
     request_date DATETIME DEFAULT CURRENT_TIMESTAMP,    
-    approval_date DATETIME,                              
-    rejected_date DATETIME,                              
-    approved_by INT,                                    
-    rejected_by INT,                                    
+    action_date DATETIME,                                                         
+    action_by INT,                                                                   
     reason TEXT,                                         
     FOREIGN KEY (users_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (approved_by) REFERENCES users(user_id) ON DELETE SET NULL,
-    FOREIGN KEY (rejected_by) REFERENCES users(user_id) ON DELETE SET NULL
+    FOREIGN KEY (action_by) REFERENCES users(user_id) ON DELETE SET NULL
 )`;
 
 module.exports = {

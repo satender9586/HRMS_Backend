@@ -165,25 +165,55 @@ const retrivePuncingstatus = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const applyforLeave = async (req, res) => {
-  const { users_id, leave_type, start_date, end_date, reason } = req.body;
+  const { users_id, leave_type, start_date, end_date, description } = req.body;
   try {
-   
-    if (!users_id || !leave_type || !start_date || !end_date || !reason) {
-      return res.status(400).json({ success: false, message: "Fields are missing!" });  
+    if (!users_id || !leave_type || !start_date || !end_date) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Fields are missing!" });
     }
 
-    // Check if user exists
     const isUserCheckQuery = "SELECT * FROM users WHERE user_id=?";
     const [isExistUser] = await promisePool.query(isUserCheckQuery, users_id);
 
-    if (isExistUser.length === 0) { 
-      return res.status(404).json({ success: false, message: "User does not exist!" });
+    if (isExistUser.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User does not exist!" });
     }
 
-    
+    // also check user already take any leave between selected date
+
+    const isLeaveRequestAlreadyQuery = `SELECT * FROM employeesleaves WHERE users_id = ? AND (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)`;
+    const leaveRequestDate = [
+      users_id,
+      start_date,
+      end_date,
+      start_date,
+      end_date,
+    ];
+    const [isleaveRequestAlready] = await promisePool.query(
+      isLeaveRequestAlreadyQuery,
+      leaveRequestDate
+    );
+
+    if (isleaveRequestAlready.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A leave request already exists for the specified dates!",
+        data: isleaveRequestAlready,
+      });
+    }
+
     const leaveInsertQuery =
-      "INSERT INTO employeesLeaves(users_id, leave_type, start_date, end_date, reason) VALUES(?,?,?,?,?)";  // fixed the typo here
-    const leaveInputData = [users_id, leave_type, start_date, end_date, reason];
+      "INSERT INTO employeesLeaves(users_id, leave_type, start_date, end_date,description ) VALUES(?,?,?,?,?)";
+    const leaveInputData = [
+      users_id,
+      leave_type,
+      start_date,
+      end_date,
+      description,
+    ];
 
     const applyForLeaveQuery = await promisePool.query(
       leaveInsertQuery,
@@ -191,8 +221,13 @@ const applyforLeave = async (req, res) => {
     );
 
     // Respond with success message
-    res.status(200).json({ success: true, message: "Leave request applied successfully", applyForLeaveQuery });
-    
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Leave request applied successfully",
+        applyForLeaveQuery,
+      });
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
     res.status(500).json({
@@ -202,4 +237,4 @@ const applyforLeave = async (req, res) => {
   }
 };
 
-module.exports = { punchIn, punchOut, retrivePuncingstatus,applyforLeave };
+module.exports = { punchIn, punchOut, retrivePuncingstatus, applyforLeave };
