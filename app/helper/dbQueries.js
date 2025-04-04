@@ -68,8 +68,9 @@ const usersLeavesTablesQuery = `CREATE TABLE IF NOT EXISTS employeesLeaves(
 const holidayTableQuery = `CREATE TABLE IF NOT EXISTS holidays(
     holiday_id INT AUTO_INCREMENT PRIMARY KEY,
     holiday_name VARCHAR(100),
-    holiday_date DATE,
-    description TEXT
+    description TEXT,
+    start_date DATE NOT NULL,                           
+    end_date DATE NOT NULL    
 )`
 
 module.exports = {
