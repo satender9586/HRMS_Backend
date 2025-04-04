@@ -8,6 +8,7 @@ const app = express();
 const { funDb } = require("./app/config/dbConnected.js")
 const  userRoutes = require("./app/routes/userRoutes.js")
 const  attendenceRoutes =  require("./app/routes/attendenceRoutes.js")
+const holidaysRoutes = require("./app/routes/holidaysRoutes.js")
 const errorHandler = require("./app/middleware/errorHandler.js")
 
 // database
@@ -21,6 +22,7 @@ app.use(morgan('dev'));
 app.use(errorHandler)
 app.use("/api/v1/auth",userRoutes)
 app.use("/api/v1/attendence",attendenceRoutes)
+app.use("/api/v1/holiday",holidaysRoutes)
 
 
 
