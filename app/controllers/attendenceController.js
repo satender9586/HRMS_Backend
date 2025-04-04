@@ -1,7 +1,7 @@
 const { promisePool } = require("../config/dbConnected.js");
 const { getCurrentDate } = require("../lib/function.js");
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> punch in api
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const punchIn = async (req, res) => {
   const { users_id } = req.body;
@@ -221,13 +221,11 @@ const applyforLeave = async (req, res) => {
     );
 
     // Respond with success message
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Leave request applied successfully",
-        applyForLeaveQuery,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Leave request applied successfully",
+      applyForLeaveQuery,
+    });
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
     res.status(500).json({

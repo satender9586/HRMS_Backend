@@ -4,7 +4,7 @@ const departmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS department (
    department_id INT AUTO_INCREMENT PRIMARY KEY,
    department_name VARCHAR(255) UNIQUE NOT NULL,
    description VARCHAR(255) NOT NULL,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )`;
 
@@ -38,7 +38,6 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   leave_type ENUM('Sick Leave', 'Casual Leave'),                                      
   notes TEXT,
   FOREIGN KEY (users_id) REFERENCES users(user_id)
-
   )`;
 
 const leavesTablesQuery = `CREATE TABLE IF NOT EXISTS leaves(
@@ -65,6 +64,14 @@ const usersLeavesTablesQuery = `CREATE TABLE IF NOT EXISTS employeesLeaves(
     FOREIGN KEY (action_by) REFERENCES users(user_id) ON DELETE SET NULL
 )`;
 
+
+const holidayTableQuery = `CREATE TABLE IF NOT EXISTS holidays(
+    holiday_id INT AUTO_INCREMENT PRIMARY KEY,
+    holiday_name VARCHAR(100),
+    holiday_date DATE,
+    description TEXT
+)`
+
 module.exports = {
   dbCreatQuery,
   usersCreateQuery,
@@ -73,4 +80,5 @@ module.exports = {
   attendenceTableCreateQuery,
   leavesTablesQuery,
   usersLeavesTablesQuery,
+  holidayTableQuery
 };
