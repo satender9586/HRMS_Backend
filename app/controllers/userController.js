@@ -43,7 +43,7 @@ const userRegister = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "User submitted successfully",
-      data: {id: result.insertId,email }
+      data: { email }
     });
 
     
