@@ -4,33 +4,18 @@ const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
 
   try {
-    if (!email) {
+
+    if (!email || !password || !role || !department) {
       return res.status(400).json({
         success: false,
-        message: "Email is missing!",
+        message: "All fields are required: email, password, role, department",
       });
     }
-    if (!password) {
-      return res.status(400).json({
-        success: false,
-        message: "Password is missing!",
-      });
-    }
-    if (!role) {
-      return res.status(400).json({
-        success: false,
-        message: "Role is missing!",
-      });
-    }
-    if (!department) {
-      return res.status(400).json({
-        success: false,
-        message: "Department is missing!",
-      });
-    }
-    
-    const isEmailExists = `SELECT * FROM users WHERE email = ?`;
-    const [userExists] = await promisePool.query(isEmailExists, email);
+
+    const [userExists] = await promisePool.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
 
     if (userExists.length > 0) {
       return res.status(400).json({
@@ -38,17 +23,34 @@ const userRegister = async (req, res) => {
         message: "Email already exists!",
       });
     }
- 
 
-    return res.status(201).json({
-      success: true,
-      message: "User submitted successfully",
-      data: { email }
+   
+    const [result] = await promisePool.query(
+      "INSERT INTO users (email, password, role, department) VALUES (?, ?, ?, ?)",
+      [email, password, role, department]
+   
+    );
+
+    if (result.affectedRows === 1) {
+      return res.status(201).json({
+        success: true,
+        message: "User registered successfully!",
+        data: {
+          id: result.insertId,
+          email,
+          role,
+          department,
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to register user.",
     });
 
-    
   } catch (error) {
-    console.log("Error in register API:", error);
+    console.error("Error in register API:", error);
     res.status(500).json({
       success: false,
       message: "Something went wrong!",
