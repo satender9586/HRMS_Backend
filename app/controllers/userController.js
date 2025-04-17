@@ -56,4 +56,39 @@ const userRegister = async (req, res) => {
   }
 };
 
-module.exports = { userRegister };
+// login API
+
+const loginApi = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    if (!email) {
+      return res.status(400).json({ success: false, message: "email is missing!" });
+    }
+    if (!password) {
+      return res.status(400).json({ success: false, message: "password is missing!" });
+    }
+
+    const checkUserExistsQuery = 'SELECT * FROM users WHERE email = ?';
+    const [rows] = await promisePool.query(checkUserExistsQuery, [email]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (rows[0].password !== password) {
+      return res.status(400).json({ success: false, message: "Wrong password!" });
+    }
+    if (rows[0].status !== "Active") {
+      return res.status(400).json({ success: false, message: "Inactive account please contact to Admin!" });
+    }
+
+    return res.status(200).json({ success: true, user: rows[0] });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Something went wrong!", error });
+  }
+}
+
+
+module.exports = { userRegister,loginApi };
