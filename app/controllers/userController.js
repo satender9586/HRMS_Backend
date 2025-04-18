@@ -92,7 +92,7 @@ const loginApi = async (req, res) => {
     }
 
     const authToken = jwt.sign(
-      { userId: user.user_id, email: user.email },
+      { userId: user.user_id, email: user.email,role:user.role },
       process.env.TOKEN_SECRET_KEY,
       { expiresIn: '1h' }
     );

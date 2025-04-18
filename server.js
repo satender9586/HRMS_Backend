@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const dotenv = require("dotenv").config();
 const colors = require('colors');
 const app = express();
+const { verifyToken } = require("./app/middleware/authMiddleware.js")
 const { funDb } = require("./app/config/dbConnected.js")
 const  userRoutes = require("./app/routes/userRoutes.js")
 const  attendenceRoutes =  require("./app/routes/attendenceRoutes.js")
@@ -21,8 +22,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev')); 
 app.use(errorHandler)
 app.use("/api/v1/auth",userRoutes)
-app.use("/api/v1/attendence",attendenceRoutes)
-app.use("/api/v1/holiday",holidaysRoutes)
+app.use("/api/v1/attendence",verifyToken,attendenceRoutes)
+app.use("/api/v1/holiday",verifyToken,holidaysRoutes)
 
 const PORT = process.env.PORT || 3000;
 
