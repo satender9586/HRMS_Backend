@@ -65,6 +65,7 @@ const userRegister = async (req, res) => {
 
 const loginApi = async (req, res) => {
   const { email, password } = req.body;
+  console.log(password)
 
   try {
     if (!email) {
