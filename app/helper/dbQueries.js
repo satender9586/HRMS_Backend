@@ -27,6 +27,9 @@ const usersCreateQuery = `CREATE TABLE IF NOT EXISTS users (
   FOREIGN KEY (role) REFERENCES role(role_id)
 )`;
 
+
+
+
 const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   attendance_id INT PRIMARY KEY AUTO_INCREMENT,
   users_id INT,
@@ -39,6 +42,26 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   notes TEXT,
   FOREIGN KEY (users_id) REFERENCES users(user_id)
   )`;
+
+
+
+  
+  const dropTriggerIfExists = `DROP TRIGGER IF EXISTS calculate_hours_worked;`;
+  const triggerQuery = `
+    CREATE TRIGGER calculate_hours_worked
+    AFTER UPDATE ON attendence
+    FOR EACH ROW
+    BEGIN
+      IF NEW.punch_out IS NOT NULL THEN
+        UPDATE attendence
+        SET hours_worked = TIMESTAMPDIFF(MINUTE, NEW.punch_in, NEW.punch_out) / 60
+        WHERE attendance_id = NEW.attendance_id;
+      END IF;
+    END;
+  `;
+
+
+
 
 const leavesTablesQuery = `CREATE TABLE IF NOT EXISTS leaves(
   leave_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -79,7 +102,11 @@ module.exports = {
   departmentTableCreateQuery,
   roleTableCreateQuery,
   attendenceTableCreateQuery,
+  dropTriggerIfExists,
+  triggerQuery,
   leavesTablesQuery,
   usersLeavesTablesQuery,
   holidayTableQuery
 };
+
+

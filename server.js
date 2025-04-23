@@ -25,8 +25,8 @@ app.use("/api/v1/auth",userRoutes)
 app.use("/api/v1/attendence",attendenceRoutes)
 app.use("/api/v1/holiday",holidaysRoutes)
 
-const PORT = process.env.PORT || 3000;
 
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(colors.yellow(`Server running on port: ${PORT}`));
 });
