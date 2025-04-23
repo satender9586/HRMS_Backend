@@ -1,13 +1,19 @@
-  
-  const mysql = require("mysql2");
-  const {holidayTableQuery, dbCreatQuery, usersCreateQuery,
-  departmentTableCreateQuery,roleTableCreateQuery,
-  usersLeavesTablesQuery,attendenceTableCreateQuery,
-  dropTriggerIfExists,
-  triggerQuery,
-  leavesTablesQuery } = require("../helper/dbQueries.js");
-  const {departmentInsertQuery, roleInsertQuery, leaveInsertQuery} = require("../helper/insertQueries.js")
-
+const mysql = require("mysql2");
+const {
+  holidayTableQuery,
+  dbCreatQuery,
+  usersCreateQuery,
+  departmentTableCreateQuery,
+  roleTableCreateQuery,
+  usersLeavesTablesQuery,
+  attendenceTableCreateQuery,
+  leavesTablesQuery,
+} = require("../helper/dbQueries.js");
+const {
+  departmentInsertQuery,
+  roleInsertQuery,
+  leaveInsertQuery,
+} = require("../helper/insertQueries.js");
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -15,22 +21,20 @@ const pool = mysql.createPool({
   password: process.env.MYSQL_PASSWORD,
   port: process.env.MYSQL_PORT,
   waitForConnections: true,
-  connectionLimit: 10, 
+  connectionLimit: 10,
   queueLimit: 0,
 });
-
 
 const promisePool = pool.promise();
 
 async function connectAsync() {
   try {
-    await promisePool.query('SELECT 1');
+    await promisePool.query("SELECT 1");
     console.log("DB connected!");
   } catch (error) {
     throw new Error("Something is wrong in DB connect: " + error.message);
   }
 }
-
 
 async function queryAsync(query) {
   try {
@@ -56,15 +60,13 @@ async function funDb() {
     // await queryAsync(roleInsertQuery);
     // await queryAsync(leaveInsertQuery);
     await queryAsync(attendenceTableCreateQuery);
-    // await queryAsync(dropTriggerIfExists);
-   
 
   } catch (error) {
     console.error("Error: ", error.message);
-  } 
+  }
   // finally {
   //   pool.end();
   // }
 }
 
-module.exports = { funDb,promisePool };
+module.exports = { funDb, promisePool };
