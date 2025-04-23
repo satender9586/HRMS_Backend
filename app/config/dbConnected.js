@@ -1,9 +1,13 @@
-const mysql = require("mysql2");
-const {holidayTableQuery, dbCreatQuery, usersCreateQuery,
+  
+  const mysql = require("mysql2");
+  const {holidayTableQuery, dbCreatQuery, usersCreateQuery,
   departmentTableCreateQuery,roleTableCreateQuery,
   usersLeavesTablesQuery,attendenceTableCreateQuery,
+  dropTriggerIfExists,
+  triggerQuery,
   leavesTablesQuery } = require("../helper/dbQueries.js");
-const {departmentInsertQuery,roleInsertQuery,leaveInsertQuery} = require("../helper/insertQueries.js")
+  const {departmentInsertQuery, roleInsertQuery, leaveInsertQuery} = require("../helper/insertQueries.js")
+
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -17,7 +21,6 @@ const pool = mysql.createPool({
 
 
 const promisePool = pool.promise();
-
 
 async function connectAsync() {
   try {
@@ -53,7 +56,8 @@ async function funDb() {
     // await queryAsync(roleInsertQuery);
     // await queryAsync(leaveInsertQuery);
     await queryAsync(attendenceTableCreateQuery);
-  
+    // await queryAsync(dropTriggerIfExists);
+   
 
   } catch (error) {
     console.error("Error: ", error.message);

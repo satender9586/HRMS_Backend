@@ -1,4 +1,5 @@
 const { promisePool } = require("../config/dbConnected.js");
+const {triggerQuery,dropTriggerIfExists} = require("../helper/dbQueries.js")
 const { getCurrentDate } = require("../lib/function.js");
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -36,22 +37,26 @@ const punchIn = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "User has already punched in today!",
-        alreadyPunched,
+        punchData : alreadyPunched[0],
         currentDate,
       });
     }
+    const punchInQuery = 
+    "INSERT INTO attendence(users_id, punch_date, punch_in) VALUES(?, ?, CURRENT_TIME)";
+  const inputData = [users_id, currentDate];
+  const [queryResponse] = await promisePool.query(punchInQuery, inputData);
 
-    const punchInQuery =
-      "INSERT INTO attendence(users_id, punch_date, punch_in) VALUES(?, ?, CURRENT_TIME)";
-    const inputData = [users_id, currentDate];
-
-    const [queryResponse] = await promisePool.query(punchInQuery, inputData);
-
-    return res.status(200).json({
-      success: true,
-      message: "Punched in successfully!",
-      queryResponse,
-    });
+  const newAttendanceId = queryResponse.insertId;
+  
+  const getPunchindata = "SELECT * FROM attendence WHERE attendance_id = ?";
+  const [getPunchStatus] = await promisePool.query(getPunchindata, [newAttendanceId]);
+  
+  return res.status(200).json({
+    success: true,
+    message: "Punched in successfully!",
+    punchData: getPunchStatus[0], 
+  });
+  
   } catch (error) {
     console.error("Error in punch-in API:", error);
     res.status(500).json({
@@ -63,12 +68,12 @@ const punchIn = async (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const punchOut = async (req, res) => {
-  const { attendance_id } = req.body;
+  const { users_id } = req.body;
   try {
-    if (!attendance_id) {
+    if (!users_id) {
       return res
         .status(404)
-        .json({ success: false, message: "Attendance ID is missing!" });
+        .json({ success: false, message: "users_id missing!" });
     }
 
     const time = new Date();
@@ -79,38 +84,54 @@ const punchOut = async (req, res) => {
     const punchInEndTime = new Date();
     punchInEndTime.setHours(18, 0, 0, 0);
 
-    if (time < punchInStartTime || time > punchInEndTime) {
-      return res.status(400).json({
-        success: false,
-        message: "You can only punch in between 9:00 AM and 6:00 PM.",
-      });
-    }
-
-    const isAttendanceMakedAlready =
-      "SELECT * FROM attendence WHERE attendance_id = ?";
-    const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
-      attendance_id,
-    ]);
-
-    if (attenderQuery.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Attendance record not found." });
-    }
-
     const currentDate = getCurrentDate();
 
-    const punchOutQuery =
-      "UPDATE attendence SET punch_out = CURRENT_TIME WHERE DATE(punch_date) = ?";
-    const [runPunchOutQuery] = await promisePool.query(punchOutQuery, [
+    // if (time < punchInStartTime || time > punchInEndTime) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "You can only punch in between 9:00 AM and 6:00 PM.",
+    //   });
+    // }
+
+    const isAttendanceMakedAlready = "SELECT * FROM attendence WHERE users_id = ? AND DATE(punch_date) = ?";
+     const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
+      users_id,
+      currentDate
+    ]);
+
+  
+    // if (attenderQuery.length === 0) {
+    //   return res
+    //     .status(404)
+    //     .json({ success: false, message: "Attendance record not found." });
+    // }
+
+
+
+    const punchOutQuery ="UPDATE attendence SET punch_out = CURRENT_TIME WHERE  users_id = ? AND DATE(punch_date) = ?";
+     const [runPunchOutQuery] = await promisePool.query(punchOutQuery, [
+      users_id,
       currentDate,
     ]);
+
+    if(runPunchOutQuery.affectedRows==0){
+       return res.status(400).json({success:false, message:"PunchOut time not updated!"})
+    }
+
+    setTimeout(async()=>{
+      const [punchouttrigger] = await promisePool.query(triggerQuery)
+      console.log("puch trigger", punchouttrigger)
+    },[2000])
+
+   
+
 
     return res.status(200).json({
       success: true,
       data: "punch-out successfully!",
       runPunchOutQuery,
     });
+
   } catch (error) {
     console.error("Error in punch-out API:", error);
     return res.status(500).json({
@@ -147,12 +168,15 @@ const retrivePuncingstatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "No attendance exists for today",
+        data:0
       });
     }
 
     return res.status(200).json({
       success: true,
-      attendenceStatus: runAttendanceGetQuery,
+      message:"Puching status data",
+      data:1,
+      punchData: runAttendanceGetQuery[0],
     });
   } catch (error) {
     console.error("Error in attendance API : ", error);

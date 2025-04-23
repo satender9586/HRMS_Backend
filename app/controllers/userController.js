@@ -1,4 +1,6 @@
 const { promisePool } = require("../config/dbConnected.js");
+const jwt = require("jsonwebtoken")
+
 
 const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
@@ -60,8 +62,10 @@ const userRegister = async (req, res) => {
 
 // login API
 
+
 const loginApi = async (req, res) => {
   const { email, password } = req.body;
+  console.log(password)
 
   try {
     if (!email) {
@@ -78,19 +82,30 @@ const loginApi = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (rows[0].password !== password) {
+    const user = rows[0];
+
+    if (user.password !== password) {
       return res.status(400).json({ success: false, message: "Wrong password!" });
     }
-    if (rows[0].status !== "Active") {
-      return res.status(400).json({ success: false, message: "Inactive account please contact to Admin!" });
+
+    if (user.status !== "Active") {
+      return res.status(400).json({ success: false, message: "Inactive account, please contact Admin!" });
     }
 
-    return res.status(200).json({ success: true, user: rows[0] });
+    const authToken = jwt.sign(
+      { userId: user.user_id, email: user.email,role:user.role },
+      process.env.TOKEN_SECRET_KEY,
+      { expiresIn: '1h' }
+    );
+
+    return res.status(200).json({ success: true, user, authToken });
 
   } catch (error) {
+    console.error("Login Error:", error);
     return res.status(500).json({ success: false, message: "Something went wrong!", error });
   }
-}
+};
+
 
 
 module.exports = { userRegister,loginApi };
