@@ -98,11 +98,11 @@ const punchOut = async (req, res) => {
     ]);
 
     // Optional: Uncomment to require attendance to exist before punch-out
-    // if (attenderQuery.length === 0) {
-    //   return res
-    //     .status(404)
-    //     .json({ success: false, message: "Attendance record not found." });
-    // }
+    if (attenderQuery.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Attendance record not found." });
+    }
 
 
     const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE users_id = ? AND DATE(punch_date) = ? `;
