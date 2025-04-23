@@ -69,6 +69,7 @@ const punchIn = async (req, res) => {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const punchOut = async (req, res) => {
   const { users_id } = req.body;
+
   try {
     if (!users_id) {
       return res
@@ -86,20 +87,17 @@ const punchOut = async (req, res) => {
 
     const currentDate = getCurrentDate();
 
-    // if (time < punchInStartTime || time > punchInEndTime) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "You can only punch in between 9:00 AM and 6:00 PM.",
-    //   });
-    // }
+    const isAttendanceMakedAlready = `
+      SELECT * FROM attendence 
+      WHERE users_id = ? AND DATE(punch_date) = ?
+    `;
 
-    const isAttendanceMakedAlready = "SELECT * FROM attendence WHERE users_id = ? AND DATE(punch_date) = ?";
-     const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
+    const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
       users_id,
-      currentDate
+      currentDate,
     ]);
 
-  
+    // Optional: Uncomment to require attendance to exist before punch-out
     // if (attenderQuery.length === 0) {
     //   return res
     //     .status(404)
@@ -107,29 +105,21 @@ const punchOut = async (req, res) => {
     // }
 
 
+    const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE users_id = ? AND DATE(punch_date) = ? `;
+    await promisePool.query(punchOutQuery, [users_id, currentDate]);
 
-    const punchOutQuery ="UPDATE attendence SET punch_out = CURRENT_TIME WHERE  users_id = ? AND DATE(punch_date) = ?";
-     const [runPunchOutQuery] = await promisePool.query(punchOutQuery, [
-      users_id,
-      currentDate,
-    ]);
-
-    if(runPunchOutQuery.affectedRows==0){
-       return res.status(400).json({success:false, message:"PunchOut time not updated!"})
-    }
-
-    setTimeout(async()=>{
-      const [punchouttrigger] = await promisePool.query(triggerQuery)
-      console.log("puch trigger", punchouttrigger)
-    },[2000])
-
-   
-
-
+    const updateHoursWorkedQuery = `
+    UPDATE attendence 
+    SET hours_worked = TIMEDIFF(punch_out, punch_in) 
+    WHERE users_id = ? AND DATE(punch_date) = ?
+  `;
+  await promisePool.query(updateHoursWorkedQuery, [users_id, currentDate]);
+  
+  
+  
     return res.status(200).json({
       success: true,
-      data: "punch-out successfully!",
-      runPunchOutQuery,
+      message: "Punch-out successful and hours updated!",
     });
 
   } catch (error) {
