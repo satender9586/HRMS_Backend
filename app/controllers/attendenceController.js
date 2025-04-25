@@ -220,7 +220,7 @@ const applyforLeave = async (req, res) => {
     }
 
     const leaveInsertQuery =
-      "INSERT INTO employee_leaves(users_id, leave_type, start_date, end_date ) VALUES(?,?,?,?)";
+      "INSERT INTO employee_leaves(users_id, leave_type, start_date, end_date ) VALUES(?,?,?,?,?)";
     const leaveInputData = [
       users_id,
       leave_type,

@@ -13,7 +13,7 @@ const addHolidays = async (req, res) => {
 
     const isAlreadyHolidayExists = `
       SELECT * 
-      FROM holidays 
+      FROM official_holidays 
       WHERE (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)
     `;
     const alreadyHolidayCheckQuery = [
@@ -35,7 +35,7 @@ const addHolidays = async (req, res) => {
     }
 
     const addHolidaysQuery = `
-      INSERT INTO holidays (holiday_name, description, start_date, end_date) 
+      INSERT INTO official_holidays (holiday_name, description, start_date, end_date) 
       VALUES (?, ?, ?, ?)
     `;
     const addHolidaysValue = [holiday_name, description, start_date, end_date];

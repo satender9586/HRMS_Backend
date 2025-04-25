@@ -13,7 +13,7 @@ const employeeRolesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employee_roles
    role_name VARCHAR(255) NOT NULL,
    description VARCHAR(255) NOT NULL,
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP 
 )`;
 
 const leavesTypesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS leave_categories(
@@ -72,8 +72,6 @@ const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_lea
     FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE,
     FOREIGN KEY (action_by) REFERENCES employees(user_id) ON DELETE SET NULL
 )`;
-
-
 
 
 module.exports = {
