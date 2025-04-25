@@ -14,7 +14,7 @@ const punchIn = async (req, res) => {
         .json({ success: false, message: "userId is missing!" });
     }
 
-    const userfindQuery = "SELECT * FROM users WHERE user_id = ?";
+    const userfindQuery = "SELECT * FROM employees WHERE user_id = ?";
     const [userExists] = await promisePool.query(userfindQuery, [users_id]);
 
     if (userExists.length === 0) {
@@ -179,7 +179,7 @@ const retrivePuncingstatus = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const applyforLeave = async (req, res) => {
-  const { users_id, leave_type, start_date, end_date, description } = req.body;
+  const { users_id, leave_type, start_date, end_date, reason } = req.body;
   try {
     if (!users_id || !leave_type || !start_date || !end_date) {
       return res
@@ -187,7 +187,7 @@ const applyforLeave = async (req, res) => {
         .json({ success: false, message: "Fields are missing!" });
     }
 
-    const isUserCheckQuery = "SELECT * FROM users WHERE user_id=?";
+    const isUserCheckQuery = "SELECT * FROM employees WHERE user_id=?";
     const [isExistUser] = await promisePool.query(isUserCheckQuery, users_id);
 
     if (isExistUser.length === 0) {
@@ -198,7 +198,7 @@ const applyforLeave = async (req, res) => {
 
     // also check user already take any leave between selected date
 
-    const isLeaveRequestAlreadyQuery = `SELECT * FROM employeesleaves WHERE users_id = ? AND (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)`;
+    const isLeaveRequestAlreadyQuery = `SELECT * FROM employee_leaves WHERE users_id = ? AND (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)`;
     const leaveRequestDate = [
       users_id,
       start_date,
@@ -220,13 +220,13 @@ const applyforLeave = async (req, res) => {
     }
 
     const leaveInsertQuery =
-      "INSERT INTO employeesLeaves(users_id, leave_type, start_date, end_date,description ) VALUES(?,?,?,?,?)";
+      "INSERT INTO employee_leaves(users_id, leave_type, start_date, end_date ) VALUES(?,?,?,?)";
     const leaveInputData = [
       users_id,
       leave_type,
       start_date,
       end_date,
-      description,
+      reason
     ];
 
     const applyForLeaveQuery = await promisePool.query(
