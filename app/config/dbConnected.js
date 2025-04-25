@@ -1,13 +1,13 @@
 const mysql = require("mysql2");
 const {
-  holidayTableQuery,
   dbCreatQuery,
-  usersCreateQuery,
-  departmentTableCreateQuery,
-  roleTableCreateQuery,
-  usersLeavesTablesQuery,
+  companyDepartmentTableCreateQuery,
+  employeeRolesTableCreateQuery,
+  leavesTypesTablesCreateQuery,
+  officialHolidayTableCreateQuery,
+  employeesTableCreateQuery,
   attendenceTableCreateQuery,
-  leavesTablesQuery,
+  employeeLeavesTablesCreateQuery
 } = require("../helper/dbQueries.js");
 const {
   departmentInsertQuery,
@@ -50,17 +50,16 @@ async function funDb() {
     await connectAsync();
     await queryAsync(dbCreatQuery);
     await queryAsync("USE EMS");
-    await queryAsync(departmentTableCreateQuery);
-    await queryAsync(usersCreateQuery);
+    await queryAsync(companyDepartmentTableCreateQuery);
     // await queryAsync(departmentInsertQuery);
-    await queryAsync(roleTableCreateQuery);
-    await queryAsync(leavesTablesQuery);
-    await queryAsync(usersLeavesTablesQuery);
-    await queryAsync(holidayTableQuery);
+    await queryAsync(employeeRolesTableCreateQuery);
     // await queryAsync(roleInsertQuery);
+    await queryAsync(leavesTypesTablesCreateQuery);
     // await queryAsync(leaveInsertQuery);
+    await queryAsync(officialHolidayTableCreateQuery);
+    await queryAsync(employeesTableCreateQuery);
     await queryAsync(attendenceTableCreateQuery);
-
+    await queryAsync(employeeLeavesTablesCreateQuery);
   } catch (error) {
     console.error("Error: ", error.message);
   }

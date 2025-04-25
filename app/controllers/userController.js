@@ -15,7 +15,7 @@ const userRegister = async (req, res) => {
     }
 
     const [userExists] = await promisePool.query(
-      "SELECT * FROM users WHERE email = ?",
+      "SELECT * FROM employees WHERE email = ?",
       [email]
     );
 
@@ -28,7 +28,7 @@ const userRegister = async (req, res) => {
 
    
     const [result] = await promisePool.query(
-      "INSERT INTO users (email, password, role, department) VALUES (?, ?, ?, ?)",
+      "INSERT INTO employees (email, password, role, department) VALUES (?, ?, ?, ?)",
       [email, password, role, department]
    
     );
@@ -75,7 +75,7 @@ const loginApi = async (req, res) => {
       return res.status(400).json({ success: false, message: "password is missing!" });
     }
 
-    const checkUserExistsQuery = 'SELECT * FROM users WHERE email = ?';
+    const checkUserExistsQuery = 'SELECT * FROM employees WHERE email = ?';
     const [rows] = await promisePool.query(checkUserExistsQuery, [email]);
 
     if (rows.length === 0) {

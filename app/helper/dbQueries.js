@@ -1,6 +1,6 @@
 const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS EMS";
 
-const departmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS department (
+const companyDepartmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS company_departments (
    department_id INT AUTO_INCREMENT PRIMARY KEY,
    department_name VARCHAR(255) UNIQUE NOT NULL,
    description VARCHAR(255) NOT NULL,
@@ -8,7 +8,7 @@ const departmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS department (
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )`;
 
-const roleTableCreateQuery = `CREATE TABLE IF NOT EXISTS role (
+const employeeRolesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employee_roles (
    role_id INT AUTO_INCREMENT PRIMARY KEY,
    role_name VARCHAR(255) NOT NULL,
    description VARCHAR(255) NOT NULL,
@@ -16,15 +16,33 @@ const roleTableCreateQuery = `CREATE TABLE IF NOT EXISTS role (
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )`;
 
-const usersCreateQuery = `CREATE TABLE IF NOT EXISTS users (
+const leavesTypesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS leave_categories(
+  leave_id INT PRIMARY KEY AUTO_INCREMENT,
+  leave_name VARCHAR(255) NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)`;
+
+const officialHolidayTableCreateQuery = `CREATE TABLE IF NOT EXISTS official_holidays(
+  holiday_id INT AUTO_INCREMENT PRIMARY KEY,
+  holiday_name VARCHAR(100),
+  description TEXT,
+  start_date DATE NOT NULL,                           
+  end_date DATE NOT NULL    
+)`;
+
+
+
+const employeesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employees (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   status ENUM('Active', 'Inactive', 'Suspended') DEFAULT 'Inactive',
   role INT NOT NULL , 
   department INT NOT NULL,
-  FOREIGN KEY (department) REFERENCES department(department_id),
-  FOREIGN KEY (role) REFERENCES role(role_id)
+  FOREIGN KEY (department) REFERENCES company_departments(department_id),
+  FOREIGN KEY (role) REFERENCES employee_roles(role_id)
 )`;
 
 const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
@@ -33,54 +51,38 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   punch_date DATE,                                      
   punch_in TIME,   
   punch_out TIME, 
-  hours_worked DECIMAL(5,2), 
+  hours_worked time DEFAULT NULL, 
   status ENUM('Present', 'Absent', 'Leave') DEFAULT 'Absent',
   leave_type ENUM('Sick Leave', 'Casual Leave'),                                      
   notes TEXT,
-  FOREIGN KEY (users_id) REFERENCES users(user_id)
+  FOREIGN KEY (users_id) REFERENCES employees(user_id)
   )`;
 
-
-
-const leavesTablesQuery = `CREATE TABLE IF NOT EXISTS leaves(
-  leave_id INT PRIMARY KEY AUTO_INCREMENT,
-  leave_name VARCHAR(255) NOT NULL,
-  description VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)`;
-
-const usersLeavesTablesQuery = `CREATE TABLE IF NOT EXISTS employeesLeaves(
-    leave_id INT AUTO_INCREMENT PRIMARY KEY,            
+const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_leaves(
+    leave_request_id INT AUTO_INCREMENT PRIMARY KEY,            
     users_id INT,                                
-    leave_type ENUM('sick', 'vacation', 'personal', 'emergency', 'maternity', 'paternity', 'compensatory','unpaid') ,
-    description VARCHAR(255),
     start_date DATE NOT NULL,                           
     end_date DATE NOT NULL,                           
-    status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     request_date DATETIME DEFAULT CURRENT_TIMESTAMP,    
     action_date DATETIME,                                                         
-    action_by INT,                                                                   
+    action_by INT, 
+    leave_type ENUM('sick', 'vacation', 'unpaid', 'emergency'),                                                                  
     reason TEXT,                                         
-    FOREIGN KEY (users_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (action_by) REFERENCES users(user_id) ON DELETE SET NULL
+    FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (action_by) REFERENCES employees(user_id) ON DELETE SET NULL
 )`;
 
-const holidayTableQuery = `CREATE TABLE IF NOT EXISTS holidays(
-    holiday_id INT AUTO_INCREMENT PRIMARY KEY,
-    holiday_name VARCHAR(100),
-    description TEXT,
-    start_date DATE NOT NULL,                           
-    end_date DATE NOT NULL    
-)`;
+
+
 
 module.exports = {
   dbCreatQuery,
-  usersCreateQuery,
-  departmentTableCreateQuery,
-  roleTableCreateQuery,
+  companyDepartmentTableCreateQuery,
+  employeeRolesTableCreateQuery,
+  leavesTypesTablesCreateQuery,
+  officialHolidayTableCreateQuery,
+  employeesTableCreateQuery,
   attendenceTableCreateQuery,
-  leavesTablesQuery,
-  usersLeavesTablesQuery,
-  holidayTableQuery,
+  employeeLeavesTablesCreateQuery
 };
