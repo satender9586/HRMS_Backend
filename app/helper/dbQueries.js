@@ -52,9 +52,7 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   punch_in TIME,   
   punch_out TIME, 
   hours_worked time DEFAULT NULL, 
-  status ENUM('Present', 'Absent', 'Leave') DEFAULT 'Absent',
-  leave_type ENUM('Sick Leave', 'Casual Leave'),                                      
-  notes TEXT,
+  status ENUM("ShortHours",'Present', 'Absent') DEFAULT 'Present' ,
   FOREIGN KEY (users_id) REFERENCES employees(user_id)
   )`;
 
@@ -67,7 +65,7 @@ const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_lea
     request_date DATETIME DEFAULT CURRENT_TIMESTAMP,    
     action_date DATETIME,                                                         
     action_by INT, 
-    leave_type ENUM('sick', 'vacation', 'unpaid', 'emergency'),                                                                  
+    leave_type ENUM('sick','emergency'),                                                                  
     reason TEXT,                                         
     FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE,
     FOREIGN KEY (action_by) REFERENCES employees(user_id) ON DELETE SET NULL
