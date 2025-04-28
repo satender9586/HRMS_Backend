@@ -52,7 +52,7 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   punch_in TIME,   
   punch_out TIME, 
   hours_worked time DEFAULT NULL, 
-  status ENUM("ShortHours",'Present', 'Absent') DEFAULT NULL ,
+  status ENUM("ShortHours",'Present', 'Absent') DEFAULT Present ,
   FOREIGN KEY (users_id) REFERENCES employees(user_id)
   )`;
 

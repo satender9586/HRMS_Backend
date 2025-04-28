@@ -245,7 +245,7 @@ const applyforLeave = async (req, res) => {
 
 const retriveAttendence = async (req, res) => {
   try {
-    const userId = 1;
+    const userId = 2;
     const startDate = '2025-4-01';
     const endDate = '2025-4-30';
 
@@ -281,9 +281,12 @@ const retriveAttendence = async (req, res) => {
       userId, startDate, endDate, startDate, endDate, startDate, endDate
     ]);
 
-    const result = attendeData(queryResponse,startDate,endDate);
+    const result = attendeData(queryResponse,startDate,endDate,userId);
     const shortData = filterDataBaseOnDates(result)
+  
 
+   
+    
     return res.status(200).json({
       success: true,
       message: "Attendance and leave data fetched successfully",
