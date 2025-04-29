@@ -57,14 +57,13 @@ const attendeData = function(queryResponse, startDate, endDate, userId) {
       const formattedDate = formatDate(date);
       dateSet.add(formattedDate);
       result.push({
-        user_id: userId, 
         date: formattedDate,
         status: entry.leave_status || entry.attendance_status || 'Absent',
         leave_type: entry.leave_type || null,
         punch_in: entry.punch_in || null,
         punch_out: entry.punch_out || null,
         hours_worked: entry.hours_worked || null,
-        id: entry.attendance || null, 
+       
       });
     });
   });
@@ -78,14 +77,14 @@ const attendeData = function(queryResponse, startDate, endDate, userId) {
 
     if (!dateSet.has(formattedDate)) {
       result.push({
-        user_id: userId, 
+     
         date: formattedDate,
         status: 'Absent',
         leave_type: null,
         punch_in: null,
         punch_out: null,
         hours_worked: null,
-        id: null, 
+      
       });
     }
 
