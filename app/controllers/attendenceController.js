@@ -1,5 +1,11 @@
 const { promisePool } = require("../config/dbConnected.js");
-const { getCurrentDate, getDateRange ,formatDate,filterDataBaseOnDates,attendeData} = require("../lib/function.js");
+const {
+  getCurrentDate,
+  getDateRange,
+  formatDate,
+  filterDataBaseOnDates,
+  attendeData,
+} = require("../lib/function.js");
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -48,14 +54,15 @@ const punchIn = async (req, res) => {
     const newAttendanceId = queryResponse.insertId;
 
     const getPunchindata = "SELECT * FROM attendence WHERE attendance_id = ?";
-    const [getPunchStatus] = await promisePool.query(getPunchindata, [newAttendanceId]);
+    const [getPunchStatus] = await promisePool.query(getPunchindata, [
+      newAttendanceId,
+    ]);
 
     return res.status(200).json({
       success: true,
       message: "Punched in successfully!",
       punchData: getPunchStatus[0],
     });
-
   } catch (error) {
     console.error("Error in punch-in API:", error);
     res.status(500).json({
@@ -103,7 +110,6 @@ const punchOut = async (req, res) => {
         .json({ success: false, message: "Attendance record not found." });
     }
 
-
     const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE users_id = ? AND DATE(punch_date) = ? `;
     await promisePool.query(punchOutQuery, [users_id, currentDate]);
 
@@ -114,13 +120,10 @@ const punchOut = async (req, res) => {
   `;
     await promisePool.query(updateHoursWorkedQuery, [users_id, currentDate]);
 
-
-
     return res.status(200).json({
       success: true,
       message: "Punch-out successful and hours updated!",
     });
-
   } catch (error) {
     console.error("Error in punch-out API:", error);
     return res.status(500).json({
@@ -157,7 +160,7 @@ const retrivePuncingstatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "No attendance exists for today",
-        data: 0
+        data: 0,
       });
     }
 
@@ -180,13 +183,11 @@ const retrivePuncingstatus = async (req, res) => {
 const applyforLeave = async (req, res) => {
   const { users_id, leave_type, start_date, end_date, reason } = req.body;
   try {
-
     if (!users_id || !leave_type || !start_date || !end_date || !reason) {
       return res
         .status(400)
         .json({ success: false, message: "All fields are required!" });
     }
-
 
     const isUserCheckQuery = "SELECT * FROM employees WHERE user_id=?";
     const [isExistUser] = await promisePool.query(isUserCheckQuery, users_id);
@@ -218,18 +219,19 @@ const applyforLeave = async (req, res) => {
       });
     }
 
-
     const leaveInsertQuery =
       "INSERT INTO employee_leaves(users_id, leave_type, start_date, end_date, reason) VALUES(?,?,?,?,?)";
     const leaveInputData = [users_id, leave_type, start_date, end_date, reason];
 
-    const [applyForLeaveQuery] = await promisePool.query(leaveInsertQuery, leaveInputData);
-
+    const [applyForLeaveQuery] = await promisePool.query(
+      leaveInsertQuery,
+      leaveInputData
+    );
 
     res.status(200).json({
       success: true,
       message: "Leave request applied successfully",
-
+      applyForLeaveQuery,
     });
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
@@ -240,72 +242,112 @@ const applyforLeave = async (req, res) => {
   }
 };
 
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveAttendence = async (req, res) => {
   try {
-    const userId = 2;
-    const startDate = '2025-4-01';
-    const endDate = '2025-4-30';
+    const { userId, startDate, endDate } = req.query;
 
-    
-    if(!startDate && endDate && userId){
-      return res.status(404).json({success:false,message:"startDate and endDate and userId is missing!"})
+    if (!userId || !startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters: userId, startDate, or endDate",
+      });
     }
 
-
-
-    const getAttendanceAndLeavesQuery = `
+    const query = `
       SELECT 
-        a.punch_date, a.punch_in, a.punch_out, a.hours_worked, a.status AS attendance_status, 
-        l.leave_type, l.start_date, l.end_date, l.status AS leave_status
-      FROM 
-        attendence a
-      LEFT JOIN 
-        employee_leaves l ON a.users_id = l.users_id AND (a.punch_date BETWEEN l.start_date AND l.end_date)
-      WHERE 
-        a.users_id = ? AND a.punch_date BETWEEN ? AND ?
-      UNION
-      SELECT 
-        NULL AS punch_date, NULL AS punch_in, NULL AS punch_out, NULL AS hours_worked, NULL AS attendance_status, 
-        l.leave_type, l.start_date, l.end_date, l.status AS leave_status
-      FROM 
-        employee_leaves l
-      WHERE 
-        l.users_id = ? AND (l.start_date BETWEEN ? AND ? OR l.end_date BETWEEN ? AND ? OR l.start_date <= ? AND l.end_date >= ?);
+        d.date,
+        a.punch_in,
+        a.punch_out,
+        a.hours_worked,
+        a.status AS attendance_status,
+        l.leave_type,
+        l.reason,
+        l.status AS leave_status,
+        h.holiday_name
+      FROM (
+        SELECT DATE_ADD(?, INTERVAL seq DAY) AS date
+        FROM (
+          SELECT @row := @row + 1 AS seq FROM 
+          (SELECT 0 UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 
+           UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) a,
+          (SELECT 0 UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 
+           UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) b,
+          (SELECT @row := -1) r
+        ) days
+        WHERE DATE_ADD(?, INTERVAL seq DAY) <= ?
+      ) d
+      LEFT JOIN attendence a
+        ON a.users_id = ? AND DATE(a.punch_date) = d.date
+      LEFT JOIN employee_leaves l
+        ON l.users_id = ? AND d.date BETWEEN l.start_date AND l.end_date
+      LEFT JOIN official_holidays h
+        ON h.start_date <= d.date AND h.end_date >= d.date
+      ORDER BY d.date;
     `;
 
-    const [queryResponse] = await promisePool.query(getAttendanceAndLeavesQuery, [
-      userId, startDate, endDate,
-      userId, startDate, endDate, startDate, endDate, startDate, endDate
+    const [rows] = await promisePool.query(query, [
+      startDate,
+      startDate,
+      endDate,
+      userId,
+      userId,
     ]);
 
-    const result = attendeData(queryResponse,startDate,endDate,userId);
-    const shortData = filterDataBaseOnDates(result)
-  
-
-   
-    
-    return res.status(200).json({
-      success: true,
-      message: "Attendance and leave data fetched successfully",
-      data: shortData,
+    const result = rows.map((row) => {
+      if (row.attendance_status) {
+        return {
+          date: row.date,
+          type: "Present",
+          punch_in: row.punch_in,
+          punch_out: row.punch_out,
+          hours_worked: row.hours_worked,
+          status: row.attendance_status,
+        };
+      } else if (row.leave_type) {
+        return {
+          date: row.date,
+          type: "Leave",
+          leave_type: row.leave_type,
+          reason : row.reason,
+          status: row.leave_status,
+        };
+      } else if (row.holiday_name) {
+        return {
+          date: row.date,
+          type: "Holiday",
+          holiday_name: row.holiday_name,
+          status:"Holiday"
+        };
+      } else {
+        return {
+          date: row.date,
+          type: "Absent",
+          status:"Absent"
+        };
+      }
     });
 
+    // Return success response
+    return res.status(200).json({
+      success: true,
+      message: "Attendance data retrieved successfully",
+      data: result,
+    });
   } catch (error) {
-    console.error("Error in LEAVE_REQUEST API:", error);
+    console.error("Error retrieving attendance:", error);
     return res.status(500).json({
       success: false,
-      message: "Something went wrong!",
+      message: "Internal server error",
     });
   }
 };
 
-
-
-
-
-
-
-module.exports = { punchIn, punchOut, retrivePuncingstatus, applyforLeave, retriveAttendence };
+module.exports = {
+  punchIn,
+  punchOut,
+  retrivePuncingstatus,
+  applyforLeave,
+  retriveAttendence,
+};

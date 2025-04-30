@@ -15,6 +15,6 @@ router.get("/punchstatus/:usersId" ,retrivePuncingstatus)
 router.post("/leave-request" ,applyforLeave)
 
 // retrive attendence
-router.post("/retrive_attendence" ,retriveAttendence)
+router.get("/retrive_attendence" ,retriveAttendence)
 
 module.exports = router
