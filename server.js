@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");  
 const morgan = require("morgan");  
 const dotenv = require("dotenv").config();
@@ -10,7 +11,8 @@ const { funDb } = require("./app/config/dbConnected.js")
 const  userRoutes = require("./app/routes/userRoutes.js")
 const  attendenceRoutes =  require("./app/routes/attendenceRoutes.js")
 const holidaysRoutes = require("./app/routes/holidaysRoutes.js")
-const errorHandler = require("./app/middleware/errorHandler.js")
+
+
 
 
 // database
@@ -19,8 +21,8 @@ funDb()
 app.use(cors()); 
 app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true })); 
+app.use(cookieParser())
 app.use(morgan('dev')); 
-app.use(errorHandler)
 app.use("/api/v1/auth",userRoutes)
 app.use("/api/v1/attendence",attendenceRoutes)
 app.use("/api/v1/holiday",holidaysRoutes)

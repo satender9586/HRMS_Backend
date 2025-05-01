@@ -1,26 +1,20 @@
 const { promisePool } = require("../config/dbConnected.js");
-const {
-  getCurrentDate,
-  getDateRange,
-  formatDate,
-  filterDataBaseOnDates,
-  attendeData,
-} = require("../lib/function.js");
+const {getCurrentDate} = require("../lib/function.js");
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const punchIn = async (req, res) => {
-  const { users_id } = req.body;
+  const { userId } = req.body;
 
   try {
-    if (!users_id) {
+    if (!userId) {
       return res
         .status(404)
         .json({ success: false, message: "userId is missing!" });
     }
 
     const userfindQuery = "SELECT * FROM employees WHERE user_id = ?";
-    const [userExists] = await promisePool.query(userfindQuery, [users_id]);
+    const [userExists] = await promisePool.query(userfindQuery, [userId]);
 
     if (userExists.length === 0) {
       return res.status(400).json({
@@ -34,7 +28,7 @@ const punchIn = async (req, res) => {
     const isAlreadyPunchedQuery =
       "SELECT * FROM attendence WHERE users_id = ? AND DATE(punch_date) = ?";
     const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [
-      users_id,
+      userId,
       currentDate,
     ]);
 
