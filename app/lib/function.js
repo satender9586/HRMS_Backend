@@ -1,6 +1,10 @@
-function getCurrentDate() {
-  const today = new Date();
+const jwt = require("jsonwebtoken");
+const { promisePool } = require("../config/dbConnected");
 
+//-------------> CURRENT DATE GENERATE IN THIS FORMAT 2025-05-01
+
+const getCurrentDate = () => {
+  const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
@@ -8,99 +12,38 @@ function getCurrentDate() {
   return `${year}-${month}-${day}`;
 }
 
+//-------------> ACCESS TOKEN GENERATE FUNCTION
 
-
-
-
-// filter object base on dates
-const filterDataBaseOnDates = function (data) {
-  const result = data.sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
-    return dateB - dateA;
-  });
-  return result
+const accessTokenGenerate = async (data) => {
+  const token = await jwt.sign({ userId: data.user_id, email: data.email, role: data.role, status: data.status }, process.env.ACCESS_TOKEN_SECRET_KEY, { expiresIn: process.env.ACCESS_TOKEN_SECRET_KEY_EXPIRY });
+  return token;
 };
 
-// date formated
-const formatDate = (date) => {
-  const d = new Date(date);
-  return d.toISOString().split('T')[0]; 
-}
+//-------------> REFRESH TOKEN GENERATE FUNCTION
 
-
-const getDateRange = (startDate, endDate) => {
-  const dates = [];
-  let currentDate = new Date(startDate);
-  const endDateObj = new Date(endDate);
-
-  while (currentDate <= endDateObj) {
-    dates.push(new Date(currentDate)); 
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  return dates;
-}
-
-
-
-// funciton go get data from attendence as well as leave
-
-const attendeData = function(queryResponse, startDate, endDate, userId) {
-  const result = [];
-  const dateSet = new Set();
-  
-
-  queryResponse.forEach((entry) => {
-    const dates = entry.punch_date ? [entry.punch_date] : getDateRange(entry.start_date, entry.end_date);
-    
-    dates.forEach(date => {
-      const formattedDate = formatDate(date);
-      dateSet.add(formattedDate);
-      result.push({
-        date: formattedDate,
-        status: entry.leave_status || entry.attendance_status || 'Absent',
-        leave_type: entry.leave_type || null,
-        punch_in: entry.punch_in || null,
-        punch_out: entry.punch_out || null,
-        hours_worked: entry.hours_worked || null,
-       
-      });
-    });
-  });
-
- 
-  let currentDate = new Date(startDate);
-  const endDateObj = new Date(endDate);
-
-  while (currentDate <= endDateObj) {
-    const formattedDate = formatDate(currentDate);
-
-    if (!dateSet.has(formattedDate)) {
-      result.push({
-     
-        date: formattedDate,
-        status: 'Absent',
-        leave_type: null,
-        punch_in: null,
-        punch_out: null,
-        hours_worked: null,
-      
-      });
-    }
-
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  return result;
-}
-
-
-
-
-module.exports = {
-  getCurrentDate,
-  getDateRange,
-  formatDate,
-  filterDataBaseOnDates,
-  attendeData
+const refreshTokenGenerate = async (data) => {
+  const token = await jwt.sign({ userId:  data.user_id}, process.env.REFRESH_TOKEN_SECRET_KEY, { expiresIn: process.env.REFRESH_TOKEN_SECRET_KEY_EXPIRY });
+  return token;
 };
+
+//-------------> REFRESH TOKEN GENERATE FUNCTION
+
+const generateAccessAndRefreshToken =  async (paramObj)=>{
+  try {
+      const accessToken = await accessTokenGenerate(paramObj)
+      const refreshToken = await refreshTokenGenerate(paramObj)
+
+      const [result] = await promisePool.query("UPDATE employees SET refreshToken = ? WHERE user_id = ?",[refreshToken, paramObj.user_id]);
+      if (result.affectedRows === 0) {
+        throw new Error({ success: false, message: 'User not found or token update failed' });
+      }
+      return {accessToken,refreshToken}
+  } catch (error) {
+      console.log("some thing is wrong! during generate accessToken and refeshToken", error)
+  }
+}
+
+//-------------> REFRESH TOKEN GENERATE FUNCTION
+
+
+module.exports = { getCurrentDate,generateAccessAndRefreshToken };

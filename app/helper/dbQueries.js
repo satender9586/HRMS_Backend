@@ -1,4 +1,8 @@
+//-------------> DATABASE CREATE QUERY
+
 const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS EMS";
+
+//-------------> COMPANY DEPARTMENT CREATE QUERY
 
 const companyDepartmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS company_departments (
    department_id INT AUTO_INCREMENT PRIMARY KEY,
