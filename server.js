@@ -27,8 +27,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser())
 app.use(morgan('dev')); 
 app.use("/api/v1/auth",userRoutes)
-app.use("/api/v1/attendence",attendenceRoutes)
-app.use("/api/v1/holiday",holidaysRoutes)
+app.use("/api/v1/attendence",verifyToken,attendenceRoutes)
+app.use("/api/v1/holiday",verifyToken ,holidaysRoutes)
 
 
 const PORT = process.env.PORT || 3000;

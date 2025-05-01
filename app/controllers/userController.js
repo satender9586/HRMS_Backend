@@ -5,14 +5,11 @@ const { ApiResponse } = require("../lib/apiResponse.js");
 
 //-------------> NEW EMPLOYEE REGISTRATION CONTROLLER
 
-
-
-
 const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
   try {
     if (!email || !password || !role || !department) {
-     
+
       const error = new ApiError(400,"All fields are required: email, password, role, department");
       return res.status(error.statusCode).json({
         success: false,
@@ -69,6 +66,8 @@ const userRegister = async (req, res) => {
 };
 
 
+//-------------> LOGGED USER CONTROLLER
+
 const loginApi = async (req, res) => {
   const { email, password } = req.body;
 
@@ -109,13 +108,11 @@ const loginApi = async (req, res) => {
     }
 
     const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user);
-
     const options = {
       httpOnly : true,
       secure :true 
     }
 
-  
     const userObj = {
       email :user.email,
       status:user.status,
@@ -136,4 +133,15 @@ const loginApi = async (req, res) => {
 };
 
 
-module.exports = { userRegister, loginApi };
+//-------------> LOGGED OUT CONTROLLER
+
+const loggedOut = async (req, res)=>{
+  try {
+      console.log("user",req.user)
+  } catch (error) {
+    
+  }
+}
+
+
+module.exports = { userRegister, loginApi,loggedOut };
