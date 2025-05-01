@@ -12,7 +12,6 @@ const getCurrentDate = () => {
   return `${year}-${month}-${day}`;
 }
 
-
 //-------------> ACCESS TOKEN GENERATE FUNCTION
 
 const accessTokenGenerate = async (data) => {
@@ -43,6 +42,8 @@ const generateAccessAndRefreshToken =  async (paramObj)=>{
       console.log("some thing is wrong! during generate accessToken and refeshToken", error)
   }
 }
+
+//-------------> REFRESH TOKEN GENERATE FUNCTION
 
 
 module.exports = { getCurrentDate,generateAccessAndRefreshToken };

@@ -110,9 +110,23 @@ const loginApi = async (req, res) => {
 
     const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user);
 
-  
+    const options = {
+      httpOnly : true,
+      secure :true 
+    }
 
-    return res.status(200).json({ success: true, user, accessToken, refreshToken });
+  
+    const userObj = {
+      email :user.email,
+      status:user.status,
+      role:user.role
+    }
+
+    return res.status(200)
+    .cookie("accessToken",accessToken,options)
+    .cookie("refreshToken",refreshToken, options)
+    .json({ success: true, data:userObj,  accessToken, refreshToken })
+
   } catch (error) {
     console.error("Login Error:", error);
     return res
