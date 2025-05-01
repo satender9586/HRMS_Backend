@@ -15,9 +15,12 @@ const holidaysRoutes = require("./app/routes/holidaysRoutes.js")
 
 
 
-// database
+
+//-------------> CONFIG
 funDb()
-// middelware
+
+//-------------> MIDDLEWARE 
+
 app.use(cors()); 
 app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true })); 
@@ -29,6 +32,7 @@ app.use("/api/v1/holiday",holidaysRoutes)
 
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(colors.yellow(`Server running on port: ${PORT}`));
 });

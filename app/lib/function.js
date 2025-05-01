@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { promisePool } = require("../config/dbConnected");
 
 //-------------> CURRENT DATE GENERATE IN THIS FORMAT 2025-05-01
 
@@ -22,8 +23,26 @@ const accessTokenGenerate = async (data) => {
 //-------------> REFRESH TOKEN GENERATE FUNCTION
 
 const refreshTokenGenerate = async (data) => {
-  const token = await jwt.sign({ userId: data.user_id}, process.env.REFRESH_TOKEN_SECRET_KEY, { expiresIn: process.env.REFRESH_TOKEN_SECRET_KEY_EXPIRY });
+  const token = await jwt.sign({ userId:  data.user_id}, process.env.REFRESH_TOKEN_SECRET_KEY, { expiresIn: process.env.REFRESH_TOKEN_SECRET_KEY_EXPIRY });
   return token;
 };
 
-module.exports = { getCurrentDate, accessTokenGenerate,refreshTokenGenerate };
+//-------------> REFRESH TOKEN GENERATE FUNCTION
+
+const generateAccessAndRefreshToken =  async (paramObj)=>{
+  try {
+      const accessToken = await accessTokenGenerate(paramObj)
+      const refreshToken = await refreshTokenGenerate(paramObj)
+
+      const [result] = await promisePool.query("UPDATE employees SET refreshToken = ? WHERE user_id = ?",[refreshToken, paramObj.user_id]);
+      if (result.affectedRows === 0) {
+        throw new Error({ success: false, message: 'User not found or token update failed' });
+      }
+      return {accessToken,refreshToken}
+  } catch (error) {
+      console.log("some thing is wrong! during generate accessToken and refeshToken", error)
+  }
+}
+
+
+module.exports = { getCurrentDate,generateAccessAndRefreshToken };

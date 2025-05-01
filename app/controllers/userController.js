@@ -1,9 +1,12 @@
 const { promisePool } = require("../config/dbConnected.js");
-const { accessTokenGenerate } = require("../lib/function.js");
+const { generateAccessAndRefreshToken } = require("../lib/function.js");
 const { ApiError } = require("../lib/apiError.js");
 const { ApiResponse } = require("../lib/apiResponse.js");
 
 //-------------> NEW EMPLOYEE REGISTRATION CONTROLLER
+
+
+
 
 const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
@@ -65,6 +68,7 @@ const userRegister = async (req, res) => {
   }
 };
 
+
 const loginApi = async (req, res) => {
   const { email, password } = req.body;
 
@@ -88,9 +92,7 @@ const loginApi = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-
     const user = rows[0];
-
     if (user.password !== password) {
       return res
         .status(400)
@@ -106,9 +108,11 @@ const loginApi = async (req, res) => {
         });
     }
 
-    const accessToken = await accessTokenGenerate(user);
+    const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user);
 
-    return res.status(200).json({ success: true, user, accessToken });
+  
+
+    return res.status(200).json({ success: true, user, accessToken, refreshToken });
   } catch (error) {
     console.error("Login Error:", error);
     return res
@@ -116,5 +120,6 @@ const loginApi = async (req, res) => {
       .json({ success: false, message: "Something went wrong!", error });
   }
 };
+
 
 module.exports = { userRegister, loginApi };
