@@ -77,10 +77,12 @@ const punchIn = async (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const punchOut = async (req, res) => {
-  const { userId } = req.body;
+  const user = req.user
+  const userId = req.user.user_id;
+
 
   try {
-    if (!userId) {
+    if (!userId || !user) {
       return res
         .status(404)
         .json({ success: false, message: "users_id missing!" });
@@ -138,10 +140,11 @@ const punchOut = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-const retrivePuncingstatus = async (req, res) => {
-  const { userId } = req.params;
+const retrivePuncingstatus = async (req, res) => {  
+  const user = req.user
+  const userId = req.user.user_id || req.params;
   try {
-    if (!userId) {
+    if (!userId || !user) {
       return res
         .status(404)
         .json({ success: false, message: "User ID is missing" });
