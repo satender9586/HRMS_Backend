@@ -4,9 +4,18 @@ const {getCurrentDate} = require("../lib/function.js");
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const punchIn = async (req, res) => {
-  const { userId } = req.body;
+  
+  const user = req.user
+  const userId = req.user.user_id;
+
 
   try {
+   
+    if (!user || !userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+    
+
     if (!userId) {
       return res
         .status(404)
@@ -42,7 +51,7 @@ const punchIn = async (req, res) => {
     }
     const punchInQuery =
       "INSERT INTO attendence(users_id, punch_date, punch_in) VALUES(?, ?, CURRENT_TIME)";
-    const inputData = [users_id, currentDate];
+    const inputData = [userId, currentDate];
     const [queryResponse] = await promisePool.query(punchInQuery, inputData);
 
     const newAttendanceId = queryResponse.insertId;
@@ -68,10 +77,10 @@ const punchIn = async (req, res) => {
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const punchOut = async (req, res) => {
-  const { users_id } = req.body;
+  const { userId } = req.body;
 
   try {
-    if (!users_id) {
+    if (!userId) {
       return res
         .status(404)
         .json({ success: false, message: "users_id missing!" });
@@ -93,7 +102,7 @@ const punchOut = async (req, res) => {
     `;
 
     const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
-      users_id,
+      userId,
       currentDate,
     ]);
 
@@ -105,14 +114,14 @@ const punchOut = async (req, res) => {
     }
 
     const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE users_id = ? AND DATE(punch_date) = ? `;
-    await promisePool.query(punchOutQuery, [users_id, currentDate]);
+    await promisePool.query(punchOutQuery, [userId, currentDate]);
 
     const updateHoursWorkedQuery = `
     UPDATE attendence 
     SET hours_worked = TIMEDIFF(punch_out, punch_in) 
     WHERE users_id = ? AND DATE(punch_date) = ?
   `;
-    await promisePool.query(updateHoursWorkedQuery, [users_id, currentDate]);
+    await promisePool.query(updateHoursWorkedQuery, [userId, currentDate]);
 
     return res.status(200).json({
       success: true,
@@ -130,9 +139,9 @@ const punchOut = async (req, res) => {
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retrivePuncingstatus = async (req, res) => {
-  const { usersId } = req.params;
+  const { userId } = req.params;
   try {
-    if (!usersId) {
+    if (!userId) {
       return res
         .status(404)
         .json({ success: false, message: "User ID is missing" });
@@ -147,7 +156,7 @@ const retrivePuncingstatus = async (req, res) => {
 
     const [runAttendanceGetQuery] = await promisePool.query(
       isAttendanceExists,
-      [usersId, startOfDay, endOfDay]
+      [userId, startOfDay, endOfDay]
     );
 
     if (runAttendanceGetQuery.length === 0) {
