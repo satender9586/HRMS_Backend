@@ -2,6 +2,7 @@ const { promisePool } = require("../config/dbConnected.js");
 const { generateAccessAndRefreshToken } = require("../lib/function.js");
 const { ApiError } = require("../lib/apiError.js");
 const { ApiResponse } = require("../lib/apiResponse.js");
+const jwt = require("jsonwebtoken");
 
 //-------------> NEW EMPLOYEE REGISTRATION CONTROLLER
 
@@ -110,9 +111,8 @@ const loginApi = async (req, res) => {
       });
     }
 
-    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      user
-    );
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user);
+
     const options = {
       httpOnly: true,
       secure: true,
@@ -129,6 +129,8 @@ const loginApi = async (req, res) => {
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options)
       .json({ success: true, data: userObj, accessToken, refreshToken });
+
+      
   } catch (error) {
     console.error("Login Error:", error);
     return res
@@ -151,6 +153,7 @@ const loggedOut = async (req, res) => {
       httpOnly: true,
       secure: true,
     };
+
     res.clearCookie("refreshToken", options);
 
     await promisePool.query(
@@ -167,4 +170,79 @@ const loggedOut = async (req, res) => {
   }
 };
 
-module.exports = { userRegister, loginApi, loggedOut };
+// -------------> REFRESH TOKEN CONTROLLER
+const refreshAccessToken = async (req, res) => {
+  try {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    if (!incomingRefreshToken) {
+      return res.status(401).json({ success: false, message: "Unauthorized access or refresh token missing!" });
+    }
+
+    try {
+      const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET_KEY);
+
+      const [userRows] = await promisePool.query("SELECT * FROM employees WHERE user_id = ?", [decodedToken.userId]);
+
+      if (userRows.length === 0) {
+        return res.status(400).json({ success: false, message: "Invalid refresh token!" });
+      }
+
+      const user = userRows[0]; 
+
+     
+      if (incomingRefreshToken !== user.refreshToken) {
+        return res.status(404).json({ success: false, message: "Refresh token expired or used!" });
+      }
+
+      
+      const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user);
+
+     
+      const options = {
+        httpOnly: true,
+        secure: true
+      };
+
+      
+      const userObj = {
+        email: user.email,
+        status: user.status,
+        role: user.role,
+      };
+
+      
+      return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json({ success: true, message: "New refresh token generated successfully!", data: userObj, accessToken, newRefreshToken });
+
+    } catch (error) {
+     
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          success: false,
+          message: "Refresh token has expired. Please log in again.",
+        });
+      }
+
+      
+      return res.status(500).json({
+        success: false,
+        message: "Error verifying token",
+      });
+    }
+
+  } catch (error) {
+    console.error("Refresh Token error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred during token refresh.",
+    });
+  }
+};
+
+
+
+module.exports = { userRegister, loginApi, loggedOut,refreshAccessToken };
