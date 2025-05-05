@@ -9,18 +9,22 @@ const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
   try {
     if (!email || !password || !role || !department) {
-
-      const error = new ApiError(400,"All fields are required: email, password, role, department");
+      const error = new ApiError(
+        400,
+        "All fields are required: email, password, role, department"
+      );
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
         errors: error.errors,
         data: error.data,
       });
-   
     }
 
-    const [userExists] = await promisePool.query("SELECT * FROM employees WHERE email = ?",[email]);
+    const [userExists] = await promisePool.query(
+      "SELECT * FROM employees WHERE email = ?",
+      [email]
+    );
 
     if (userExists.length > 0) {
       const error = new ApiError(400, "Email already exists!");
@@ -39,7 +43,11 @@ const userRegister = async (req, res) => {
 
     if (result.affectedRows === 1) {
       const data = { id: result.insertId, email, role, department };
-      const response = new ApiResponse(201,data,"User registered successfully!");
+      const response = new ApiResponse(
+        201,
+        data,
+        "User registered successfully!"
+      );
       return res.status(response.statusCode).json({
         success: response.success,
         message: response.message,
@@ -47,15 +55,13 @@ const userRegister = async (req, res) => {
       });
     }
 
-    const errors = new ApiError(500,"Failed to register user.");
+    const errors = new ApiError(500, "Failed to register user.");
     return res.status(errors.statusCode).json({
       success: false,
       message: errors.message,
       errors: errors.errors,
       data: errors.data,
     });
-
-
   } catch (error) {
     console.error("Error in register API:", error);
     res.status(500).json({
@@ -64,7 +70,6 @@ const userRegister = async (req, res) => {
     });
   }
 };
-
 
 //-------------> LOGGED USER CONTROLLER
 
@@ -99,31 +104,31 @@ const loginApi = async (req, res) => {
     }
 
     if (user.status !== "Active") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Inactive account, please contact Admin!",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Inactive account, please contact Admin!",
+      });
     }
 
-    const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user);
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user
+    );
     const options = {
-      httpOnly : true,
-      secure :true 
-    }
+      httpOnly: true,
+      secure: true,
+    };
 
     const userObj = {
-      email :user.email,
-      status:user.status,
-      role:user.role
-    }
+      email: user.email,
+      status: user.status,
+      role: user.role,
+    };
 
-    return res.status(200)
-    .cookie("accessToken",accessToken,options)
-    .cookie("refreshToken",refreshToken, options)
-    .json({ success: true, data:userObj,  accessToken, refreshToken })
-
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json({ success: true, data: userObj, accessToken, refreshToken });
   } catch (error) {
     console.error("Login Error:", error);
     return res
@@ -132,16 +137,34 @@ const loginApi = async (req, res) => {
   }
 };
 
-
 //-------------> LOGGED OUT CONTROLLER
 
-const loggedOut = async (req, res)=>{
+const loggedOut = async (req, res) => {
   try {
-      console.log("user",req.user)
+    if (!req.user || !req.user.user_id) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    const userId = req.user.user_id;
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    res.clearCookie("refreshToken", options);
+
+    await promisePool.query(
+      "UPDATE employees SET refreshToken = NULL WHERE user_id = ?",
+      [userId]
+    );
+
+    res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
-    
+    console.error("Logout error:", error);
+    res.status(500).json({
+      message: "An error occurred during logout",
+    });
   }
-}
+};
 
-
-module.exports = { userRegister, loginApi,loggedOut };
+module.exports = { userRegister, loginApi, loggedOut };
