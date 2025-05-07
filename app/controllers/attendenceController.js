@@ -4,7 +4,6 @@ const {getCurrentDate} = require("../lib/function.js");
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const punchIn = async (req, res) => {
-  
   const user = req.user
   const userId = req.user.user_id;
 
@@ -142,15 +141,16 @@ const punchOut = async (req, res) => {
 
 const retrivePuncingstatus = async (req, res) => {  
   const user = req.user
-  const userId = req.user.user_id || req.params;
+  const userId = req.user.user_id 
+
   try {
     if (!userId || !user) {
       return res
         .status(404)
         .json({ success: false, message: "User ID is missing" });
     }
+    
     const currentDate = new Date();
-
     const startOfDay = new Date(currentDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(currentDate.setHours(23, 59, 59, 999));
 
@@ -251,10 +251,16 @@ const applyforLeave = async (req, res) => {
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveAttendence = async (req, res) => {
+  const user = req.user
+  const userId = req.user.user_id 
   try {
-    const { userId, startDate, endDate } = req.query;
+    const { startDate, endDate } = req.query;
+   
+    if(!user || !userId){
+      return res.status(404).json({success:false,message:"token and id missing!"})
+    }
 
-    if (!userId || !startDate || !endDate) {
+    if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
         message: "Missing required parameters: userId, startDate, or endDate",

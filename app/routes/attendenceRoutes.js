@@ -9,7 +9,7 @@ router.post("/check_in" ,punchIn)
 router.patch("/check_out" ,punchOut)
 
 // punch out method
-router.get("/punchstatus/:usersId" ,retrivePuncingstatus)
+router.get("/punchstatus" ,retrivePuncingstatus)
 
 // punch out method
 router.post("/leave-request" ,applyforLeave)
