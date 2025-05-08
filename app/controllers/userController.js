@@ -10,10 +10,7 @@ const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
   try {
     if (!email || !password || !role || !department) {
-      const error = new ApiError(
-        400,
-        "All fields are required: email, password, role, department"
-      );
+      const error = new ApiError(400,"All fields are required: email, password, role, department");
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
@@ -44,11 +41,7 @@ const userRegister = async (req, res) => {
 
     if (result.affectedRows === 1) {
       const data = { id: result.insertId, email, role, department };
-      const response = new ApiResponse(
-        201,
-        data,
-        "User registered successfully!"
-      );
+      const response = new ApiResponse(201,data,"User registered successfully!");
       return res.status(response.statusCode).json({
         success: response.success,
         message: response.message,

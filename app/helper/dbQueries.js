@@ -45,6 +45,7 @@ const employeesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employees (
   status ENUM('Active', 'Inactive', 'Suspended') DEFAULT 'Inactive',
   role INT NOT NULL , 
   department INT NOT NULL,
+  refeshToken VARCHAR(500) NOT NULL,
   FOREIGN KEY (department) REFERENCES company_departments(department_id),
   FOREIGN KEY (role) REFERENCES employee_roles(role_id)
 )`;
