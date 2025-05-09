@@ -10,7 +10,7 @@ const punchIn = async (req, res) => {
 
   try {
    
-    if (!user || !userId) {
+    if (!user || !userId) { 
       return res.status(400).json({ message: "User not authenticated" });
     }
     
