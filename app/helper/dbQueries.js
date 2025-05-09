@@ -45,6 +45,7 @@ const employeesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employees (
   status ENUM('Active', 'Inactive', 'Suspended') DEFAULT 'Inactive',
   role INT NOT NULL , 
   department INT NOT NULL,
+  refreshToken TEXT,
   FOREIGN KEY (department) REFERENCES company_departments(department_id),
   FOREIGN KEY (role) REFERENCES employee_roles(role_id)
 )`;
@@ -75,6 +76,50 @@ const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_lea
     FOREIGN KEY (action_by) REFERENCES employees(user_id) ON DELETE SET NULL
 )`;
 
+const employeeBasicPersonalDetails = `CREATE TABLE IF NOT EXISTS personal_details (
+  personal_id INT AUTO_INCREMENT PRIMARY KEY,
+  users_id INT NOT NULL,
+  first_name VARCHAR(200),
+  last_name VARCHAR(200),
+  date_of_birth DATE,
+  gender ENUM('male', 'female', 'other'),
+  marital_status ENUM('married', 'single', 'divorced'),
+  blood_group VARCHAR(10),
+  FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE
+)`
+
+
+const employeeContactDetails = `CREATE TABLE IF NOT EXISTS contact_details(
+  contact_id INT AUTO_INCREMENT PRIMARY KEY,
+  users_id INT,
+  phoneNumber VARCHAR(100) UNIQUE,
+  email   VARCHAR(50) UNIQUE,
+  address VARCHAR(100),
+  emergencyNumber VARCHAR(100),
+  FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE
+)`
+
+const employeebankDetails = `CREATE TABLE IF NOT EXISTS bank_details (
+  bank_id INT AUTO_INCREMENT PRIMARY KEY,
+  users_id INT NOT NULL,
+  bank_name VARCHAR(200),
+  bank_number VARCHAR(30),
+  ifsc_number VARCHAR(20),
+  pan_number VARCHAR(20),
+  pf_number VARCHAR(20),
+  FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE
+)`
+
+const employeeDocumentDetails =`CREATE TABLE IF NOT EXISTS documents (
+  document_id INT AUTO_INCREMENT PRIMARY KEY,
+  users_id INT NOT NULL,
+  resume LONGBLOB,
+  adhaar LONGBLOB,
+  experience_letter LONGBLOB,
+  education_certificate LONGBLOB,
+  FOREIGN KEY (users_id) REFERENCES employees(user_id) ON DELETE CASCADE
+)`
+
 
 module.exports = {
   dbCreatQuery,
@@ -84,5 +129,9 @@ module.exports = {
   officialHolidayTableCreateQuery,
   employeesTableCreateQuery,
   attendenceTableCreateQuery,
-  employeeLeavesTablesCreateQuery
+  employeeLeavesTablesCreateQuery,
+  employeeBasicPersonalDetails,
+  employeeContactDetails,
+  employeebankDetails,
+  employeeDocumentDetails
 };

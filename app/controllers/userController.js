@@ -72,6 +72,277 @@ const userRegister = async (req, res) => {
   }
 };
 
+//-------------> EMPLOYEE PERSONAL DETAILS CONTROLLER
+
+const addEmployeeBasicPersonalDetails = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+
+  const {
+    first_name,
+    last_name,
+    date_of_birth,
+    gender,
+    marital_status,
+    blood_group
+  } = req.body;
+
+  try {
+    if (
+      !user ||
+      !userId ||
+      !first_name ||
+      !last_name ||
+      !date_of_birth ||
+      !gender ||
+      !marital_status ||
+      !blood_group
+    ) {
+
+      const errors = new ApiError(500, "All fields are required!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+   
+    if (isNaN(Date.parse(date_of_birth))) {
+      const errors = new ApiError(400, "Invalid date format for date_of_birth!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    
+    const [existingDetails] = await promisePool.query('SELECT * FROM personal_details WHERE users_id = ?',[userId]);
+
+    if (existingDetails.length > 0) {
+     
+      const errors = new ApiError(400, "Personal details already exist!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    
+    const [result] = await promisePool.query(
+      `INSERT INTO personal_details 
+        (users_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        first_name,
+        last_name,
+        date_of_birth,
+        gender,
+        marital_status,
+        blood_group
+      ]
+    );
+
+    const response = new ApiResponse(201,result.insertId,"Personal details added successfully");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
+    });
+
+  } catch (err) {
+    console.error('Database error:', err);
+    const errors = new ApiError(500, "Internal server error!");
+    return res.status(errors.statusCode).json({
+      success: false,
+      message: errors.message,
+      errors: errors.errors,
+      data: errors.data,
+    });
+  }
+};
+
+
+//-------------> EMPLOYEE CONTACT DETAILS CONTROLLER
+const addEmployeeContactDetails = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+
+  const {
+    phoneNumber,
+    email,
+    address,
+    emergencyNumber
+  } = req.body;
+
+  try {
+   
+    if (
+      !user ||
+      !userId ||
+      !phoneNumber ||
+      !email ||
+      !address ||
+      !emergencyNumber
+    ) {
+
+      const error = new ApiError(400, "All fields are required!");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+
+    const [existingContact] = await promisePool.query('SELECT * FROM contact_details WHERE phoneNumber = ? OR email = ?',[phoneNumber, email]);
+
+    if (existingContact.length > 0) {
+      const error = new ApiError(409, "Phone number or email already exists!");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+    const [userContact] = await promisePool.query('SELECT * FROM contact_details WHERE users_id = ?',[userId]);
+
+    if (userContact.length > 0) {
+      const error = new ApiError(400, "Contact details already exist for this user!");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+
+    const [result] = await promisePool.query(
+      `INSERT INTO contact_details 
+        (users_id, phoneNumber, email, address, emergencyNumber)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        userId,
+        phoneNumber,
+        email,
+        address,
+        emergencyNumber
+      ]
+    );
+    const response = new ApiResponse(201,result.insertId,"Contact details added successfully");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
+    });
+
+
+  } catch (err) {
+    console.error("Database error:", err);
+    const error = new ApiError(500, "Internal server error");
+    return res.status(error.statusCode).json({
+      success: false,
+      message: error.message,
+      errors: error.errors,
+      data: error.data,
+    });
+  }
+};
+
+//-------------> BANK DETAILS CONTROLLER
+  
+const addEmployeeBankDetails = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+
+  const {
+    bank_name,
+    bank_number,
+    ifsc_number,
+    pan_number,
+    pf_number
+  } = req.body;
+
+  try {
+  
+    if (
+      !user ||
+      !userId ||
+      !bank_name ||
+      !bank_number ||
+      !ifsc_number ||
+      !pan_number ||
+      !pf_number
+    ) {
+      const error = new ApiError(400, "All fields are required!");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+    
+    const [existingBank] = await promisePool.query(
+      'SELECT * FROM bank_details WHERE users_id = ?',
+      [userId]
+    );
+
+    if (existingBank.length > 0) {
+      const error = new ApiError(400, "Bank details already exist for this user!");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+   
+    const [result] = await promisePool.query(
+      `INSERT INTO bank_details 
+        (users_id, bank_name, bank_number, ifsc_number, pan_number, pf_number)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        bank_name,
+        bank_number,
+        ifsc_number,
+        pan_number,
+        pf_number
+      ]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Bank details added successfully",
+      bank_id: result.insertId
+    });
+
+  } catch (err) {
+    console.error("Database error:", err);
+    const error = new ApiError(500, "Internal server error!");
+    return res.status(error.statusCode).json({
+      success: false,
+      message: error.message,
+      errors: error.errors,
+      data: error.data,
+    });
+  }
+};
+
+
 //-------------> LOGGED USER CONTROLLER
 
 const loginApi = async (req, res) => {
@@ -245,4 +516,4 @@ const refreshAccessToken = async (req, res) => {
 
 
 
-module.exports = { userRegister, loginApi, loggedOut,refreshAccessToken };
+module.exports = { userRegister,addEmployeeBasicPersonalDetails,addEmployeeContactDetails,addEmployeeBankDetails, loginApi, loggedOut,refreshAccessToken };

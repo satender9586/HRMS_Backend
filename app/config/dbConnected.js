@@ -7,7 +7,11 @@ const {
   officialHolidayTableCreateQuery,
   employeesTableCreateQuery,
   attendenceTableCreateQuery,
-  employeeLeavesTablesCreateQuery
+  employeeLeavesTablesCreateQuery,
+  employeeBasicPersonalDetails,
+  employeeContactDetails,
+  employeebankDetails,
+  employeeDocumentDetails
 } = require("../helper/dbQueries.js");
 const {
   departmentInsertQuery,
@@ -60,6 +64,10 @@ async function funDb() {
     await queryAsync(employeesTableCreateQuery);
     await queryAsync(attendenceTableCreateQuery);
     await queryAsync(employeeLeavesTablesCreateQuery);
+    await queryAsync(employeeBasicPersonalDetails);
+    await queryAsync(employeeContactDetails);
+    await queryAsync(employeebankDetails);
+    await queryAsync(employeeDocumentDetails);
   } catch (error) {
     console.error("Error: ", error.message);
   }
@@ -69,3 +77,6 @@ async function funDb() {
 }
 
 module.exports = { funDb, promisePool };
+
+
+
