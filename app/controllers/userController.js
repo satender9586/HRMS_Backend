@@ -1,16 +1,19 @@
 const { promisePool } = require("../config/dbConnected.js");
 const { generateAccessAndRefreshToken } = require("../lib/function.js");
+const {generateEmployeeId} = require("../lib/asynHandler.js")
 const { ApiError } = require("../lib/apiError.js");
 const { ApiResponse } = require("../lib/apiResponse.js");
 const jwt = require("jsonwebtoken");
+
 
 //-------------> NEW EMPLOYEE REGISTRATION CONTROLLER
 
 const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
+  
   try {
     if (!email || !password || !role || !department) {
-      const error = new ApiError(400,"All fields are required: email, password, role, department");
+      const error = new ApiError(400, "All fields are required: email, password, role, department");
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
@@ -19,10 +22,7 @@ const userRegister = async (req, res) => {
       });
     }
 
-    const [userExists] = await promisePool.query(
-      "SELECT * FROM employees WHERE email = ?",
-      [email]
-    );
+    const [userExists] = await promisePool.query("SELECT * FROM employees WHERE email = ?",[email]);
 
     if (userExists.length > 0) {
       const error = new ApiError(400, "Email already exists!");
@@ -34,14 +34,28 @@ const userRegister = async (req, res) => {
       });
     }
 
+    const generateId = await generateEmployeeId();
+
+    const [existingId] = await promisePool.query( "SELECT * FROM employees WHERE employee_id = ?",[generateId]);
+
+    if (existingId.length > 0) {
+      const error = new ApiError(400, "Generated Employee ID already exists. Please try again.");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
     const [result] = await promisePool.query(
-      "INSERT INTO employees (email, password, role, department) VALUES (?, ?, ?, ?)",
-      [email, password, role, department]
+      "INSERT INTO employees (email, password, role, department, employee_id) VALUES (?, ?, ?, ?, ?)",
+      [email, password, role, department, generateId]
     );
 
     if (result.affectedRows === 1) {
-      const data = { id: result.insertId, email, role, department };
-      const response = new ApiResponse(201,data,"User registered successfully!");
+      const data = {id: result.insertId,email,role,department,employeeId: generateId};
+      const response = new ApiResponse(201, data, "User registered successfully!");
       return res.status(response.statusCode).json({
         success: response.success,
         message: response.message,
@@ -58,18 +72,25 @@ const userRegister = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in register API:", error);
-    res.status(500).json({
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
       success: false,
-      message: "Something went wrong!",
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
     });
   }
 };
+
+module.exports = { userRegister };
+
 
 //-------------> EMPLOYEE PERSONAL DETAILS CONTROLLER
 
 const addEmployeeBasicPersonalDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
+  const employee_id = req.user?.employee_id
 
   const {
     first_name,
@@ -113,7 +134,7 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
     }
 
     
-    const [existingDetails] = await promisePool.query('SELECT * FROM personal_details WHERE users_id = ?',[userId]);
+    const [existingDetails] = await promisePool.query('SELECT * FROM personal_details WHERE employee_id = ?',[employee_id]);
 
     if (existingDetails.length > 0) {
      
@@ -129,10 +150,10 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
     
     const [result] = await promisePool.query(
       `INSERT INTO personal_details 
-        (users_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group)
+        (employee_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        userId,
+        employee_id,
         first_name,
         last_name,
         date_of_birth,
@@ -166,6 +187,7 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
 const addEmployeeContactDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
+  const employee_id = req.user?.employee_id;
 
   const {
     phoneNumber,
@@ -207,7 +229,7 @@ const addEmployeeContactDetails = async (req, res) => {
       });
     }
 
-    const [userContact] = await promisePool.query('SELECT * FROM contact_details WHERE users_id = ?',[userId]);
+    const [userContact] = await promisePool.query('SELECT * FROM contact_details WHERE employee_id = ?',[employee_id]);
 
     if (userContact.length > 0) {
       const error = new ApiError(400, "Contact details already exist for this user!");
@@ -222,10 +244,10 @@ const addEmployeeContactDetails = async (req, res) => {
 
     const [result] = await promisePool.query(
       `INSERT INTO contact_details 
-        (users_id, phoneNumber, email, address, emergencyNumber)
+        (employee_id, phoneNumber, email, address, emergencyNumber)
        VALUES (?, ?, ?, ?, ?)`,
       [
-        userId,
+        employee_id,
         phoneNumber,
         email,
         address,
@@ -257,6 +279,7 @@ const addEmployeeContactDetails = async (req, res) => {
 const addEmployeeBankDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
+  const employee_id = req.user?.employee_id;
 
   const {
     bank_name,
@@ -288,8 +311,8 @@ const addEmployeeBankDetails = async (req, res) => {
 
     
     const [existingBank] = await promisePool.query(
-      'SELECT * FROM bank_details WHERE users_id = ?',
-      [userId]
+      'SELECT * FROM bank_details WHERE employee_id = ?',
+      [employee_id]
     );
 
     if (existingBank.length > 0) {
@@ -305,10 +328,10 @@ const addEmployeeBankDetails = async (req, res) => {
    
     const [result] = await promisePool.query(
       `INSERT INTO bank_details 
-        (users_id, bank_name, bank_number, ifsc_number, pan_number, pf_number)
+        (employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        userId,
+        employee_id,
         bank_name,
         bank_number,
         ifsc_number,
@@ -343,32 +366,25 @@ const loginApi = async (req, res) => {
 
   try {
     if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "email is missing!" });
+      return res.status(400).json({ success: false, message: "Email is missing!" });
     }
     if (!password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "password is missing!" });
+      return res.status(400).json({ success: false, message: "Password is missing!" });
     }
 
     const checkUserExistsQuery = "SELECT * FROM employees WHERE email = ?";
     const [rows] = await promisePool.query(checkUserExistsQuery, [email]);
 
     if (rows.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-    const user = rows[0];
-    if (user.password !== password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Wrong password!" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (user.status !== "Active") {
+    const user = rows[0];
+
+    if (user.password !== password) {
+      return res.status(400).json({ success: false, message: "Wrong password!" });
+    }
+    if (user.status !== "active") {
       return res.status(400).json({
         success: false,
         message: "Inactive account, please contact Admin!",
@@ -376,17 +392,19 @@ const loginApi = async (req, res) => {
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user);
-
     const options = {
-      httpOnly: true,
-      secure: true,
+      httpOnly: true,  
+      secure: true, 
     };
 
+   
     const userObj = {
       email: user.email,
       status: user.status,
       role: user.role,
+      employee_id: user.employee_id
     };
+
 
     return res
       .status(200)
@@ -394,7 +412,6 @@ const loginApi = async (req, res) => {
       .cookie("refreshToken", refreshToken, options)
       .json({ success: true, data: userObj, accessToken, refreshToken });
 
-      
   } catch (error) {
     console.error("Login Error:", error);
     return res
@@ -403,36 +420,37 @@ const loginApi = async (req, res) => {
   }
 };
 
+
 //-------------> LOGGED OUT CONTROLLER
 
 const loggedOut = async (req, res) => {
   try {
-    if (!req.user || !req.user.user_id) {
+      if (!req.user || !req.user.employee_id) {
       return res.status(400).json({ message: "User not authenticated" });
     }
 
-    const userId = req.user.user_id;
+    const { user_id, employee_id } = req.user;  
 
-    const options = {
+      const options = {
       httpOnly: true,
-      secure: true,
+      secure: true
     };
 
     res.clearCookie("refreshToken", options);
+    res.clearCookie("accessToken", options); 
 
-    await promisePool.query(
-      "UPDATE employees SET refreshToken = NULL WHERE user_id = ?",
-      [userId]
-    );
+    await promisePool.query("UPDATE employees SET refreshToken = NULL WHERE employee_id = ?",[employee_id]);
 
-    res.status(200).json({ message: "Logged out successfully" });
+    return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "An error occurred during logout",
+      error: error.message,  
     });
   }
 };
+
 
 // -------------> REFRESH TOKEN CONTROLLER
 const refreshAccessToken = async (req, res) => {
@@ -446,7 +464,7 @@ const refreshAccessToken = async (req, res) => {
     try {
       const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET_KEY);
 
-      const [userRows] = await promisePool.query("SELECT * FROM employees WHERE user_id = ?", [decodedToken.userId]);
+      const [userRows] = await promisePool.query("SELECT * FROM employees WHERE employee_id = ?", [decodedToken.employee_id]);
 
       if (userRows.length === 0) {
         return res.status(400).json({ success: false, message: "Invalid refresh token!" });

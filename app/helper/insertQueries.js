@@ -7,12 +7,12 @@ const departmentInsertQuery =
 const roleInsertQuery = 
 `
     INSERT INTO employee_roles(role_name,description)
-    VALUES( 'emp', 'Employee'),( 'adm', 'Admin'),( 'sadm', 'Super Admin')
+    VALUES( '0', 'Employee'),( '1', 'Admin'),( '2', 'Super Admin')
 `
 const leaveInsertQuery = 
 `
     INSERT INTO leave_categories(leave_name,description)
-    VALUES( 'Sick', 'emargency leave'),( 'Vacation', 'planning leave'),( 'Unpaid', 'unpaid leaves')
+    VALUES( 'sick', 'emargency leave'),( 'vacation', 'planning leave'),( 'unpaid', 'unpaid leaves')
 `
 
 

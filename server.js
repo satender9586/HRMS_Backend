@@ -11,9 +11,7 @@ const { funDb } = require("./app/config/dbConnected.js")
 const  userRoutes = require("./app/routes/userRoutes.js")
 const  attendenceRoutes =  require("./app/routes/attendenceRoutes.js")
 const holidaysRoutes = require("./app/routes/holidaysRoutes.js")
-
-
-
+const adminRoutes = require("./app/routes/adminRoutes.js")
 
 
 //-------------> CONFIG
@@ -29,6 +27,7 @@ app.use(morgan('dev'));
 app.use("/api/v1/auth",userRoutes)
 app.use("/api/v1/attendence",verifyToken,attendenceRoutes)
 app.use("/api/v1/holiday",verifyToken ,holidaysRoutes)
+app.use("/api/v1/admin",verifyToken,adminRoutes)
 
 
 const PORT = process.env.PORT || 3000;

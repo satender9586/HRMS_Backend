@@ -15,14 +15,14 @@ const getCurrentDate = () => {
 //-------------> ACCESS TOKEN GENERATE FUNCTION
 
 const accessTokenGenerate = async (data) => {
-  const token = await jwt.sign({ userId: data.user_id, email: data.email, role: data.role, status: data.status }, process.env.ACCESS_TOKEN_SECRET_KEY, { expiresIn: process.env.ACCESS_TOKEN_SECRET_KEY_EXPIRY });
+  const token = await jwt.sign({ employee_id: data.employee_id, email: data.email, role: data.role, status: data.status }, process.env.ACCESS_TOKEN_SECRET_KEY, { expiresIn: process.env.ACCESS_TOKEN_SECRET_KEY_EXPIRY });
   return token;
 };
 
 //-------------> REFRESH TOKEN GENERATE FUNCTION
 
 const refreshTokenGenerate = async (data) => {
-  const token = await jwt.sign({ userId:  data.user_id}, process.env.REFRESH_TOKEN_SECRET_KEY, { expiresIn: process.env.REFRESH_TOKEN_SECRET_KEY_EXPIRY });
+  const token = await jwt.sign({ employee_id:  data.employee_id}, process.env.REFRESH_TOKEN_SECRET_KEY, { expiresIn: process.env.REFRESH_TOKEN_SECRET_KEY_EXPIRY });
   return token;
 };
 
@@ -33,7 +33,7 @@ const generateAccessAndRefreshToken =  async (paramObj)=>{
       const accessToken = await accessTokenGenerate(paramObj)
       const refreshToken = await refreshTokenGenerate(paramObj)
 
-      const [result] = await promisePool.query("UPDATE employees SET refreshToken = ? WHERE user_id = ?",[refreshToken, paramObj.user_id]);
+      const [result] = await promisePool.query("UPDATE employees SET refreshToken = ? WHERE employee_id = ?",[refreshToken, paramObj.employee_id]);
       if (result.affectedRows === 0) {
         throw new Error({ success: false, message: 'User not found or token update failed' });
       }

@@ -6,6 +6,7 @@ const {getCurrentDate} = require("../lib/function.js");
 const punchIn = async (req, res) => {
   const user = req.user
   const userId = req.user.user_id;
+  const employee_id = req.user.employee_id;
 
 
   try {
@@ -21,8 +22,8 @@ const punchIn = async (req, res) => {
         .json({ success: false, message: "userId is missing!" });
     }
 
-    const userfindQuery = "SELECT * FROM employees WHERE user_id = ?";
-    const [userExists] = await promisePool.query(userfindQuery, [userId]);
+    const userfindQuery = "SELECT * FROM employees WHERE employee_id = ?";
+    const [userExists] = await promisePool.query(userfindQuery, [employee_id]);
 
     if (userExists.length === 0) {
       return res.status(400).json({
@@ -34,7 +35,7 @@ const punchIn = async (req, res) => {
     const currentDate = getCurrentDate();
 
     const isAlreadyPunchedQuery =
-      "SELECT * FROM attendence WHERE users_id = ? AND DATE(punch_date) = ?";
+      "SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?";
     const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [
       userId,
       currentDate,
@@ -49,8 +50,8 @@ const punchIn = async (req, res) => {
       });
     }
     const punchInQuery =
-      "INSERT INTO attendence(users_id, punch_date, punch_in) VALUES(?, ?, CURRENT_TIME)";
-    const inputData = [userId, currentDate];
+      "INSERT INTO attendence(employee_id, punch_date, punch_in) VALUES(?, ?, CURRENT_TIME)";
+    const inputData = [employee_id, currentDate];
     const [queryResponse] = await promisePool.query(punchInQuery, inputData);
 
     const newAttendanceId = queryResponse.insertId;
@@ -78,13 +79,14 @@ const punchIn = async (req, res) => {
 const punchOut = async (req, res) => {
   const user = req.user
   const userId = req.user.user_id;
+  const employee_id = req.user.employee_id;
 
 
   try {
     if (!userId || !user) {
       return res
         .status(404)
-        .json({ success: false, message: "users_id missing!" });
+        .json({ success: false, message: "employee_id missing!" });
     }
 
     const time = new Date();
@@ -99,30 +101,30 @@ const punchOut = async (req, res) => {
 
     const isAttendanceMakedAlready = `
       SELECT * FROM attendence 
-      WHERE users_id = ? AND DATE(punch_date) = ?
+      WHERE employee_id = ? AND DATE(punch_date) = ?
     `;
 
     const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
-      userId,
+      employee_id,
       currentDate,
     ]);
 
-    // Optional: Uncomment to require attendance to exist before punch-out
+    
     if (attenderQuery.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "Attendance record not found." });
     }
 
-    const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE users_id = ? AND DATE(punch_date) = ? `;
-    await promisePool.query(punchOutQuery, [userId, currentDate]);
+    const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE employee_id = ? AND DATE(punch_date) = ? `;
+    await promisePool.query(punchOutQuery, [employee_id, currentDate]);
 
     const updateHoursWorkedQuery = `
     UPDATE attendence 
     SET hours_worked = TIMEDIFF(punch_out, punch_in) 
-    WHERE users_id = ? AND DATE(punch_date) = ?
+    WHERE employee_id = ? AND DATE(punch_date) = ?
   `;
-    await promisePool.query(updateHoursWorkedQuery, [userId, currentDate]);
+    await promisePool.query(updateHoursWorkedQuery, [employee_id, currentDate]);
 
     return res.status(200).json({
       success: true,
@@ -142,6 +144,7 @@ const punchOut = async (req, res) => {
 const retrivePuncingstatus = async (req, res) => {  
   const user = req.user
   const userId = req.user.user_id 
+  const employee_id = req.user.employee_id 
 
   try {
     if (!userId || !user) {
@@ -155,11 +158,11 @@ const retrivePuncingstatus = async (req, res) => {
     const endOfDay = new Date(currentDate.setHours(23, 59, 59, 999));
 
     const isAttendanceExists =
-      "SELECT * FROM attendence WHERE users_id = ? AND punch_date BETWEEN ? AND ?";
+      "SELECT * FROM attendence WHERE employee_id = ? AND punch_date BETWEEN ? AND ?";
 
     const [runAttendanceGetQuery] = await promisePool.query(
       isAttendanceExists,
-      [userId, startOfDay, endOfDay]
+      [employee_id, startOfDay, endOfDay]
     );
 
     if (runAttendanceGetQuery.length === 0) {
@@ -187,26 +190,29 @@ const retrivePuncingstatus = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 const applyforLeave = async (req, res) => {
-  const { users_id, leave_type, start_date, end_date, reason } = req.body;
+    const user = req.user
+    const userId = req.user.user_id 
+    const employee_id = req.user.employee_id 
+   const {leave_type, start_date, end_date, reason } = req.body;
   try {
-    if (!users_id || !leave_type || !start_date || !end_date || !reason) {
+    if (!user || !leave_type || !start_date || !end_date || !reason) {
       return res
         .status(400)
         .json({ success: false, message: "All fields are required!" });
     }
 
-    const isUserCheckQuery = "SELECT * FROM employees WHERE user_id=?";
-    const [isExistUser] = await promisePool.query(isUserCheckQuery, users_id);
+    const isUserCheckQuery = "SELECT * FROM employees WHERE employee_id=?";
+    const [isExistUser] = await promisePool.query(isUserCheckQuery, employee_id);
 
     if (isExistUser.length === 0) {
       return res
         .status(404)
         .json({ success: false, message: "User does not exist!" });
     }
-    const isLeaveRequestAlreadyQuery = `SELECT * FROM employee_leaves WHERE users_id = ? AND (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)`;
+    const isLeaveRequestAlreadyQuery = `SELECT * FROM employee_leaves WHERE employee_id = ? AND (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)`;
 
     const leaveRequestDate = [
-      users_id,
+      employee_id,
       start_date,
       end_date,
       start_date,
@@ -226,8 +232,8 @@ const applyforLeave = async (req, res) => {
     }
 
     const leaveInsertQuery =
-      "INSERT INTO employee_leaves(users_id, leave_type, start_date, end_date, reason) VALUES(?,?,?,?,?)";
-    const leaveInputData = [users_id, leave_type, start_date, end_date, reason];
+      "INSERT INTO employee_leaves(employee_id, leave_type, start_date, end_date, reason) VALUES(?,?,?,?,?)";
+    const leaveInputData = [employee_id, leave_type, start_date, end_date, reason];
 
     const [applyForLeaveQuery] = await promisePool.query(
       leaveInsertQuery,
@@ -249,21 +255,25 @@ const applyforLeave = async (req, res) => {
 };
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 const retriveAttendence = async (req, res) => {
-  const user = req.user
-  const userId = req.user.user_id 
+  const user = req.user;
+  const userId = req.user?.user_id;
+  const employee_id = req.user?.employee_id;
+
   try {
     const { startDate, endDate } = req.query;
-   
-    if(!user || !userId){
-      return res.status(404).json({success:false,message:"token and id missing!"})
+
+    if (!user || !userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized access. Token or user missing.",
+      });
     }
 
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
-        message: "Missing required parameters: userId, startDate, or endDate",
+        message: "Missing required query parameters: startDate or endDate",
       });
     }
 
@@ -291,9 +301,9 @@ const retriveAttendence = async (req, res) => {
         WHERE DATE_ADD(?, INTERVAL seq DAY) <= ?
       ) d
       LEFT JOIN attendence a
-        ON a.users_id = ? AND DATE(a.punch_date) = d.date
+        ON a.employee_id = ? AND DATE(a.punch_date) = d.date
       LEFT JOIN employee_leaves l
-        ON l.users_id = ? AND d.date BETWEEN l.start_date AND l.end_date
+        ON l.employee_id = ? AND d.date BETWEEN l.start_date AND l.end_date
       LEFT JOIN official_holidays h
         ON h.start_date <= d.date AND h.end_date >= d.date
       ORDER BY d.date;
@@ -303,8 +313,8 @@ const retriveAttendence = async (req, res) => {
       startDate,
       startDate,
       endDate,
-      userId,
-      userId,
+      employee_id,
+      employee_id,
     ]);
 
     const result = rows.map((row) => {
@@ -322,7 +332,7 @@ const retriveAttendence = async (req, res) => {
           date: row.date,
           type: "Leave",
           leave_type: row.leave_type,
-          reason : row.reason,
+          reason: row.reason,
           status: row.leave_status,
         };
       } else if (row.holiday_name) {
@@ -330,18 +340,17 @@ const retriveAttendence = async (req, res) => {
           date: row.date,
           type: "Holiday",
           holiday_name: row.holiday_name,
-          status:"Holiday"
+          status: "Holiday",
         };
       } else {
         return {
           date: row.date,
           type: "Absent",
-          status:"Absent"
+          status: "Absent",
         };
       }
     });
 
-    // Return success response
     return res.status(200).json({
       success: true,
       message: "Attendance data retrieved successfully",
