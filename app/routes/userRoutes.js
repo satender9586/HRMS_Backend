@@ -1,6 +1,6 @@
 const express = require("express")
 const routes = express.Router()
-const {userRegister,addEmployeeBasicPersonalDetails,addEmployeeContactDetails,addEmployeeBankDetails,loginApi,loggedOut,refreshAccessToken}= require("../controllers/userController.js")
+const {userRegister,addEmployeeBasicPersonalDetails,addEmployeeContactDetails,addEmployeeBankDetails,loginApi,loggedOut,refreshAccessToken, authInfoRetrive}= require("../controllers/userController.js")
 const { verifyToken } = require("../middleware/authMiddleware.js")
 
 
@@ -27,6 +27,9 @@ routes.post("/logout",verifyToken ,loggedOut)
 
 //-------------->>> logged out routes 
 routes.post("/refreshtoken",refreshAccessToken)
+
+//-------------->>> logged out routes 
+routes.get("/authinfo",verifyToken,authInfoRetrive)
 
 
 module.exports = routes
