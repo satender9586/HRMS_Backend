@@ -90,7 +90,6 @@ module.exports = { userRegister };
 const addEmployeeBasicPersonalDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
-  const employee_id = req.user?.employee_id
 
   const {
     first_name,
@@ -98,11 +97,13 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
     date_of_birth,
     gender,
     marital_status,
-    blood_group
+    blood_group,
+    employee_id
   } = req.body;
 
   try {
     if (
+      !employee_id||
       !user ||
       !userId ||
       !first_name ||
@@ -187,22 +188,23 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
 const addEmployeeContactDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
-  const employee_id = req.user?.employee_id;
 
   const {
     phoneNumber,
-    email,
+    alterEmail,
     address,
-    emergencyNumber
+    emergencyNumber,
+    employee_id
   } = req.body;
 
   try {
    
     if (
+      !employee_id||
       !user ||
       !userId ||
       !phoneNumber ||
-      !email ||
+      !alterEmail ||
       !address ||
       !emergencyNumber
     ) {
@@ -217,7 +219,7 @@ const addEmployeeContactDetails = async (req, res) => {
     }
 
 
-    const [existingContact] = await promisePool.query('SELECT * FROM contact_details WHERE phoneNumber = ? OR email = ?',[phoneNumber, email]);
+    const [existingContact] = await promisePool.query('SELECT * FROM contact_details WHERE phoneNumber = ? OR alterEmail = ?',[phoneNumber, alterEmail]);
 
     if (existingContact.length > 0) {
       const error = new ApiError(409, "Phone number or email already exists!");
@@ -244,12 +246,12 @@ const addEmployeeContactDetails = async (req, res) => {
 
     const [result] = await promisePool.query(
       `INSERT INTO contact_details 
-        (employee_id, phoneNumber, email, address, emergencyNumber)
+        (employee_id, phoneNumber, alterEmail, address, emergencyNumber)
        VALUES (?, ?, ?, ?, ?)`,
       [
         employee_id,
         phoneNumber,
-        email,
+        alterEmail,
         address,
         emergencyNumber
       ]
@@ -279,9 +281,9 @@ const addEmployeeContactDetails = async (req, res) => {
 const addEmployeeBankDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
-  const employee_id = req.user?.employee_id;
 
   const {
+    employee_id,
     bank_name,
     bank_number,
     ifsc_number,
@@ -292,6 +294,7 @@ const addEmployeeBankDetails = async (req, res) => {
   try {
   
     if (
+      !employee_id ||
       !user ||
       !userId ||
       !bank_name ||
