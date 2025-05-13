@@ -1,5 +1,6 @@
 const { promisePool } = require("../config/dbConnected.js");
 const { getCurrentDate } = require("../lib/function.js");
+const cron = require('node-cron');
  
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -8,9 +9,8 @@ const punchIn = async (req, res) => {
   const userId = req.user.user_id;
   const employee_id = req.user.employee_id;
 
-
   try {
-   
+
     if (!user || !userId) {
       return res.status(400).json({ message: "User not authenticated" });
     }
@@ -24,6 +24,7 @@ const punchIn = async (req, res) => {
 
     const userfindQuery = "SELECT * FROM employees WHERE employee_id = ?";
     const [userExists] = await promisePool.query(userfindQuery, [employee_id]);
+ 
 
     if (userExists.length === 0) {
       return res.status(400).json({
@@ -34,13 +35,9 @@ const punchIn = async (req, res) => {
 
     const currentDate = getCurrentDate();
 
-    const isAlreadyPunchedQuery =
-      "SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?";
-    const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [
-      userId,
-      currentDate,
-    ]);
-
+    const isAlreadyPunchedQuery ="SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?";
+    const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [employee_id,currentDate,]);
+   console.log("alreadyPunched",alreadyPunched)
     if (alreadyPunched.length > 0) {
       return res.status(400).json({
         success: false,
@@ -364,6 +361,70 @@ const retriveAttendence = async (req, res) => {
     });
   }
 };
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+const markAbsenteesAndHalfDay = async () => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const [employees] = await promisePool.query('SELECT employee_id, role FROM employees');
+
+    for (const emp of employees) {
+      const empId = emp.employee_id;
+      const employeerole = emp.role;
+
+      if (employeerole === 2 || employeerole === 3) {
+        continue;
+      }
+
+      const [[attendance]] = await promisePool.query('SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?',[empId, today]);
+
+      if (!attendance) {
+        const [[leave]] = await promisePool.query(
+          `SELECT * FROM employee_leaves 
+           WHERE employee_id = ? 
+           AND status = 'Approved' 
+           AND ? BETWEEN start_date AND end_date`,
+          [empId, today]
+        );
+
+        if (leave) {
+          await promisePool.query(
+            `INSERT INTO attendence (employee_id, punch_date, status, remarks, leave_type)
+             VALUES (?, ?, "Leave", ?, ?)`,
+            [empId, today, `Auto-marked: Leave (${leave.leave_type})`, leave.leave_type]
+          );
+          console.log(`Employee ${empId} marked as Leave.`);
+        } else {
+          await promisePool.query(
+            `INSERT INTO attendence (employee_id, punch_date, status, remarks)
+             VALUES (?, ?, "Absent", "Auto-marked: No punch-in today")`,
+            [empId, today]
+          );
+          console.log(`Employee ${empId} marked as Absent.`);
+        }
+      } else if (attendance.punch_in && !attendance.punch_out) {
+        await promisePool.query(
+          `UPDATE attendence SET status = "Halfday", remarks = "Auto-marked: No punch-out"
+           WHERE attendance_id = ?`,
+          [attendance.attendance_id]
+        );
+        console.log(`Employee ${empId} marked as Halfday (no punch-out).`);
+      } else {
+        console.log(`Employee ${empId} already has full attendance.`);
+      }
+    }
+
+    console.log('Cron job completed: Attendance updated.');
+  } catch (error) {
+    console.error('Error during attendance check:', error);
+  }
+};
+
+cron.schedule('59 23 * * *', markAbsenteesAndHalfDay);
+
+
 
 module.exports = {
   punchIn,
