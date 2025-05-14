@@ -185,73 +185,117 @@ const retrivePuncingstatus = async (req, res) => {
   }
 };
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-const applyforLeave = async (req, res) => {
-    const user = req.user
-    const userId = req.user.user_id 
-    const employee_id = req.user.employee_id 
-   const {leave_type, start_date, end_date, reason } = req.body;
-  try {
-    if (!user || !leave_type || !start_date || !end_date || !reason) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required!" });
-    }
-
-    const isUserCheckQuery = "SELECT * FROM employees WHERE employee_id=?";
-    const [isExistUser] = await promisePool.query(isUserCheckQuery, employee_id);
-
-    if (isExistUser.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User does not exist!" });
-    }
-    const isLeaveRequestAlreadyQuery = `SELECT * FROM employee_leaves WHERE employee_id = ? AND (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)`;
-
-    const leaveRequestDate = [
-      employee_id,
-      start_date,
-      end_date,
-      start_date,
-      end_date,
-    ];
-    const [isleaveRequestAlready] = await promisePool.query(
-      isLeaveRequestAlreadyQuery,
-      leaveRequestDate
-    );
-
-    if (isleaveRequestAlready.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "A leave request already exists for the specified dates!",
-        data: isleaveRequestAlready,
-      });
-    }
-
-    const leaveInsertQuery =
-      "INSERT INTO employee_leaves(employee_id, leave_type, start_date, end_date, reason) VALUES(?,?,?,?,?)";
-    const leaveInputData = [employee_id, leave_type, start_date, end_date, reason];
-
-    const [applyForLeaveQuery] = await promisePool.query(
-      leaveInsertQuery,
-      leaveInputData
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Leave request applied successfully",
-      applyForLeaveQuery,
-    });
-  } catch (error) {
-    console.error("Error in LEAVE_REQUEST API:", error);
-    res.status(500).json({
-      success: false,
-      message: "Something went wrong!",
-    });
-  }
-};
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// const retriveAttendence = async (req, res) => {
+//   const user = req.user;
+//   const userId = req.user?.user_id;
+//   const employee_id = req.user?.employee_id;
+
+//   try {
+//     const { startDate, endDate } = req.query;
+
+//     if (!user || !userId) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Unauthorized access. Token or user missing.",
+//       });
+//     }
+
+//     if (!startDate || !endDate) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Missing required query parameters: startDate or endDate",
+//       });
+//     }
+
+//     const query = `
+//       SELECT 
+//         d.date,
+//         a.punch_in,
+//         a.punch_out,
+//         a.hours_worked,
+//         a.status AS attendance_status,
+//         l.leave_type,
+//         l.reason,
+//         l.status AS leave_status,
+//         h.holiday_name
+//       FROM (
+//         SELECT DATE_ADD(?, INTERVAL seq DAY) AS date
+//         FROM (
+//           SELECT @row := @row + 1 AS seq FROM 
+//           (SELECT 0 UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 
+//            UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) a,
+//           (SELECT 0 UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 
+//            UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) b,
+//           (SELECT @row := -1) r
+//         ) days
+//         WHERE DATE_ADD(?, INTERVAL seq DAY) <= ?
+//       ) d
+//       LEFT JOIN attendence a
+//         ON a.employee_id = ? AND DATE(a.punch_date) = d.date
+//       LEFT JOIN employee_leaves l
+//         ON l.employee_id = ? AND d.date BETWEEN l.start_date AND l.end_date
+//       LEFT JOIN official_holidays h
+//         ON h.start_date <= d.date AND h.end_date >= d.date
+//       ORDER BY d.date;
+//     `;
+
+//     const [rows] = await promisePool.query(query, [
+//       startDate,
+//       startDate,
+//       endDate,
+//       employee_id,
+//       employee_id,
+//     ]);
+
+//     const result = rows.map((row) => {
+//       if (row.attendance_status) {
+//         return {
+//           date: row.date,
+//           type: "Present",
+//           punch_in: row.punch_in,
+//           punch_out: row.punch_out,
+//           hours_worked: row.hours_worked,
+//           status: row.attendance_status,
+//         };
+//       } else if (row.leave_type) {
+//         return {
+//           date: row.date,
+//           type: "Leave",
+//           leave_type: row.leave_type,
+//           reason: row.reason,
+//           status: row.leave_status,
+//         };
+//       } else if (row.holiday_name) {
+//         return {
+//           date: row.date,
+//           type: "Holiday",
+//           holiday_name: row.holiday_name,
+//           status: "Holiday",
+//         };
+//       } else {
+//         return {
+//           date: row.date,
+//           type: "Absent",
+//           status: "Absent",
+//         };
+//       }
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Attendance data retrieved successfully",
+//       data: result,
+//     });
+//   } catch (error) {
+//     console.error("Error retrieving attendance:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
 const retriveAttendence = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
@@ -281,10 +325,10 @@ const retriveAttendence = async (req, res) => {
         a.punch_out,
         a.hours_worked,
         a.status AS attendance_status,
-        l.leave_type,
-        l.reason,
-        l.status AS leave_status,
-        h.holiday_name
+        h.holiday_name,
+        el.leave_type,
+        el.start_date AS leave_start_date,
+        el.end_date AS leave_end_date
       FROM (
         SELECT DATE_ADD(?, INTERVAL seq DAY) AS date
         FROM (
@@ -299,10 +343,10 @@ const retriveAttendence = async (req, res) => {
       ) d
       LEFT JOIN attendence a
         ON a.employee_id = ? AND DATE(a.punch_date) = d.date
-      LEFT JOIN employee_leaves l
-        ON l.employee_id = ? AND d.date BETWEEN l.start_date AND l.end_date
       LEFT JOIN official_holidays h
         ON h.start_date <= d.date AND h.end_date >= d.date
+      LEFT JOIN employee_leaves el
+        ON el.employee_id = ? AND d.date BETWEEN el.start_date AND el.end_date AND el.status = 'approved'
       ORDER BY d.date;
     `;
 
@@ -311,39 +355,52 @@ const retriveAttendence = async (req, res) => {
       startDate,
       endDate,
       employee_id,
-      employee_id,
+      employee_id
     ]);
 
     const result = rows.map((row) => {
-      if (row.attendance_status) {
-        return {
-          date: row.date,
-          type: "Present",
-          punch_in: row.punch_in,
-          punch_out: row.punch_out,
-          hours_worked: row.hours_worked,
-          status: row.attendance_status,
-        };
-      } else if (row.leave_type) {
+      const date = new Date(row.date);
+      const isWeekend = date.getDay() === 0; // Sunday
+
+      // If leave is approved, mark attendance as "Leave"
+      if (row.leave_type) {
         return {
           date: row.date,
           type: "Leave",
           leave_type: row.leave_type,
-          reason: row.reason,
-          status: row.leave_status,
+          status: "Leave",
         };
-      } else if (row.holiday_name) {
+      }
+
+      // If there is attendance data (Present)
+      if (row.attendance_status) {
+        return {
+          date: row.date,
+          type: "Present",
+          status: row.attendance_status,
+          punch_in: row.punch_in,
+          punch_out: row.punch_out,
+          hours_worked: row.hours_worked,
+        };
+      }
+
+      // If it's a holiday
+      else if (row.holiday_name) {
         return {
           date: row.date,
           type: "Holiday",
           holiday_name: row.holiday_name,
           status: "Holiday",
         };
-      } else {
+      }
+
+      // If it's a weekend or absent day
+      else {
         return {
           date: row.date,
-          type: "Absent",
-          status: "Absent",
+          type: isWeekend ? "Weekend" : "Absent",
+          status: isWeekend ? "Weekend" : "Absent",
+          message: isWeekend ? "This is a weekend (Sunday)." : null,
         };
       }
     });
@@ -364,65 +421,150 @@ const retriveAttendence = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-
-const markAbsenteesAndHalfDay = async () => {
+const getMonthlyAttendanceSummary = async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const [employees] = await promisePool.query('SELECT employee_id, role FROM employees');
+    const user = req.user;
 
-    for (const emp of employees) {
-      const empId = emp.employee_id;
-      const employeerole = emp.role;
+    if (!user || !user.employee_id) {
+      return res.status(401).json({ success: false, message: "Unauthorized or invalid user." });
+    }
 
-      if (employeerole === 2 || employeerole === 3) {
-        continue;
-      }
+    const employee_id = user.employee_id;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); 
 
-      const [[attendance]] = await promisePool.query('SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?',[empId, today]);
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
 
-      if (!attendance) {
-        const [[leave]] = await promisePool.query(
-          `SELECT * FROM employee_leaves 
-           WHERE employee_id = ? 
-           AND status = 'Approved' 
-           AND ? BETWEEN start_date AND end_date`,
-          [empId, today]
-        );
+    const formatDate = (date) => date.toISOString().split('T')[0];
+    const monthStartStr = formatDate(monthStart);
+    const monthEndStr = formatDate(monthEnd);
 
-        if (leave) {
-          await promisePool.query(
-            `INSERT INTO attendence (employee_id, punch_date, status, remarks, leave_type)
-             VALUES (?, ?, "Leave", ?, ?)`,
-            [empId, today, `Auto-marked: Leave (${leave.leave_type})`, leave.leave_type]
-          );
-          console.log(`Employee ${empId} marked as Leave.`);
-        } else {
-          await promisePool.query(
-            `INSERT INTO attendence (employee_id, punch_date, status, remarks)
-             VALUES (?, ?, "Absent", "Auto-marked: No punch-in today")`,
-            [empId, today]
-          );
-          console.log(`Employee ${empId} marked as Absent.`);
-        }
-      } else if (attendance.punch_in && !attendance.punch_out) {
-        await promisePool.query(
-          `UPDATE attendence SET status = "Halfday", remarks = "Auto-marked: No punch-out"
-           WHERE attendance_id = ?`,
-          [attendance.attendance_id]
-        );
-        console.log(`Employee ${empId} marked as Halfday (no punch-out).`);
-      } else {
-        console.log(`Employee ${empId} already has full attendance.`);
+    const [attendanceSummary] = await promisePool.query(`
+      SELECT status, COUNT(*) AS count
+      FROM attendence
+      WHERE employee_id = ?
+        AND DATE(punch_date) BETWEEN ? AND ?
+      GROUP BY status
+    `, [employee_id, monthStartStr, monthEndStr]);
+
+    const [attendanceDatesRows] = await promisePool.query(`
+      SELECT DATE(punch_date) AS date
+      FROM attendence
+      WHERE employee_id = ?
+        AND DATE(punch_date) BETWEEN ? AND ?
+    `, [employee_id, monthStartStr, monthEndStr]);
+
+    const attendanceDates = new Set(attendanceDatesRows.map(row => formatDate(new Date(row.date))));
+
+
+    const [leaveRows] = await promisePool.query(`
+      SELECT start_date, end_date
+      FROM employee_leaves
+      WHERE employee_id = ?
+        AND status = 'Approved'
+        AND (
+          (start_date BETWEEN ? AND ?) OR
+          (end_date BETWEEN ? AND ?) OR
+          (start_date <= ? AND end_date >= ?)
+        )
+    `, [
+      employee_id,
+      monthStartStr, monthEndStr,
+      monthStartStr, monthEndStr,
+      monthStartStr, monthEndStr
+    ]);
+
+    const leaveDates = new Set();
+    for (const row of leaveRows) {
+      const start = new Date(row.start_date) < monthStart ? monthStart : new Date(row.start_date);
+      const end = new Date(row.end_date) > monthEnd ? monthEnd : new Date(row.end_date);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        leaveDates.add(formatDate(new Date(d)));
       }
     }
 
-    console.log('Cron job completed: Attendance updated.');
+    const [holidayRows] = await promisePool.query(`
+      SELECT start_date, end_date
+      FROM official_holidays
+      WHERE start_date <= ? AND end_date >= ?
+    `, [monthEndStr, monthStartStr]);
+
+    const officialHolidayDates = new Set();
+    for (const row of holidayRows) {
+      const start = new Date(row.start_date) < monthStart ? monthStart : new Date(row.start_date);
+      const end = new Date(row.end_date) > monthEnd ? monthEnd : new Date(row.end_date);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        officialHolidayDates.add(formatDate(new Date(d)));
+      }
+    }
+
+
+    const weekendDates = new Set();
+    for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+      const day = d.getDay();
+      if (day === 0 || day === 6) { 
+        weekendDates.add(formatDate(new Date(d)));
+      }
+    }
+
+
+    const result = {
+      Present: 0,
+      Absent: 0,
+      Leave: leaveDates.size,
+      Halfday: 0,
+      Weekend: 0,
+      OfficialHoliday: officialHolidayDates.size
+    };
+
+   
+    attendanceSummary.forEach(row => {
+      if (row.status === 'Leave') return;
+      if (result.hasOwnProperty(row.status)) {
+        result[row.status] += row.count;
+      }
+    });
+
+    
+    for (const date of weekendDates) {
+      if (
+        !attendanceDates.has(date) &&
+        !leaveDates.has(date) &&
+        !officialHolidayDates.has(date)
+      ) {
+        result.Weekend += 1;
+      }
+    }
+
+
+    let totalDays = 0;
+    for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+      const dateStr = formatDate(new Date(d));
+      if (
+        !attendanceDates.has(dateStr) &&
+        !leaveDates.has(dateStr) &&
+        !officialHolidayDates.has(dateStr) &&
+        !weekendDates.has(dateStr)
+      ) {
+        totalDays++;
+      }
+    }
+    result.Absent = totalDays;
+
+    return res.status(200).json({ success: true, data: result });
+
   } catch (error) {
-    console.error('Error during attendance check:', error);
+    console.error("Error in monthly summary API:", error);
+    return res.status(500).json({ success: false, message: "Server error while generating summary." });
   }
 };
 
-cron.schedule('59 23 * * *', markAbsenteesAndHalfDay);
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
 
 
 
@@ -430,6 +572,6 @@ module.exports = {
   punchIn,
   punchOut,
   retrivePuncingstatus,
-  applyforLeave,
   retriveAttendence,
+  getMonthlyAttendanceSummary
 };
