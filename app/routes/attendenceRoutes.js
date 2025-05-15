@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const {punchIn,punchOut,retrivePuncingstatus,applyforLeave,retriveAttendence} = require("../controllers/attendenceController.js")
+const {punchIn,punchOut,retrivePuncingstatus,retriveAttendence,getMonthlyAttendanceSummary} = require("../controllers/attendenceController.js")
 
 // punch in method
 router.post("/check_in" ,punchIn)
@@ -11,10 +11,9 @@ router.patch("/check_out" ,punchOut)
 // punch out method
 router.get("/punchstatus" ,retrivePuncingstatus)
 
-// punch out method
-router.post("/leave-request" ,applyforLeave)
-
 // retrive attendence
 router.get("/retrive_attendence" ,retriveAttendence)
+// retrive attendence
+router.get("/monthly-summary" ,getMonthlyAttendanceSummary)
 
 module.exports = router

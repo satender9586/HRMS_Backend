@@ -542,12 +542,11 @@ const refreshAccessToken = async (req, res) => {
 };
 
 // -------------> AUTH INFO RETRIVE
-
 const authInfoRetrive = async (req, res) => {
   const user = req.user;
   const userId = req.user.user_id;
   const role = req.user.role;
-  const incommingEmployeeId = req.user.employee_id; 
+  const incommingEmployeeId = req.user.employee_id;
 
   try {
     if (!user || !userId) {
@@ -564,15 +563,15 @@ const authInfoRetrive = async (req, res) => {
       `
       SELECT 
         e.employee_id, e.role, e.email, e.status, e.department,
-        pd.*, 
-        bd.*, 
-        cd.*
+        pd.first_name, pd.last_name, pd.date_of_birth, pd.gender, pd.marital_status, pd.blood_group,
+        bd.bank_name, bd.bank_number, bd.ifsc_number, bd.pan_number, bd.pf_number,
+        cd.phoneNumber, cd.alterEmail, cd.address, cd.emergencyNumber
       FROM employees e
       LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
       LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
       LEFT JOIN contact_details cd ON e.employee_id = cd.employee_id
       WHERE e.employee_id = ?
-    `,
+      `,
       [incommingEmployeeId]
     );
 
@@ -584,14 +583,42 @@ const authInfoRetrive = async (req, res) => {
       });
     }
 
+    const emp = retrieveEmployee[0];
 
-    const employeeData = { ...retrieveEmployee[0] };
-    delete employeeData.password;
-    delete employeeData.refreshToken;
+    const structuredEmployee = {
+      user_info: {
+        employee_id: emp.employee_id,
+        role: emp.role,
+        email: emp.email,
+        status: emp.status,
+        department: emp.department,
+      },
+      personal_info: {
+        first_name: emp.first_name,
+        last_name: emp.last_name,
+        date_of_birth: emp.date_of_birth,
+        gender: emp.gender,
+        marital_status: emp.marital_status,
+        blood_group: emp.blood_group,
+      },
+      bank_info: {
+        bank_name: emp.bank_name,
+        bank_number: emp.bank_number,
+        ifsc_number: emp.ifsc_number,
+        pan_number: emp.pan_number,
+        pf_number: emp.pf_number,
+      },
+      contact_info: {
+        phone_number: emp.phoneNumber,
+        alternate_email: emp.alterEmail,
+        address: emp.address,
+        emergency_number: emp.emergencyNumber,
+      },
+    };
 
     const response = new ApiResponse(
       200,
-      employeeData,
+      structuredEmployee,
       "Employee profile retrieved successfully"
     );
 
@@ -616,6 +643,7 @@ const authInfoRetrive = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   userRegister,
