@@ -19,7 +19,7 @@ const makeEmployeeActiveDeactive = async (req, res) => {
       });
     }
 
-    if (role !== 2 && role !== 3) {
+    if (role !== 1 && role !== 2) {
       const error = new ApiError(400, "You are not an admin or super admin!");
       return res.status(error.statusCode).json({
         success: false,
@@ -94,59 +94,84 @@ const makeEmployeeActiveDeactive = async (req, res) => {
   }
 };
 const retriveAllEmployeeList = async (req, res) => {
-  const user = req.user;
-  const userId = req.user.user_id;
-  const role = req.user.role;
+  const { user_id: userId, role } = req.user || {};
+
+
+  if (!userId) {
+    return res.status(400).json({
+      success: false,
+      message: "User ID and token missing.",
+    });
+  }
+
+  // Role validation (only admin or super admin can access)
+  if (![1, 2].includes(role)) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Only admin or super admin can retrieve employee data.",
+    });
+  }
 
   try {
+    // Fetch employees and their related data
+    const [employees] = await promisePool.query(`
+      SELECT 
+        e.employee_id, e.role, e.email, e.status, e.department,
+        pd.first_name, pd.last_name, pd.date_of_birth, pd.gender, pd.marital_status, pd.blood_group,
+        bd.bank_name, bd.bank_number, bd.ifsc_number, bd.pan_number, bd.pf_number,
+        cd.phoneNumber, cd.alterEmail, cd.address, cd.emergencyNumber
+      FROM employees e
+      LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
+      LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
+      LEFT JOIN contact_details cd ON e.employee_id = cd.employee_id
+    `);
 
-      if (!user || !userId) {
-      const error = new ApiError(400, "userId and token missing!");
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        errors: error.errors,
-        data: error.data,
-      });
-    }
+    // Format the data into structured objects
+    const formattedEmployees = employees.map(emp => ({
+      user_info: {
+        employee_id: emp.employee_id,
+        role: emp.role,
+        email: emp.email,
+        status: emp.status,
+        department: emp.department,
+      },
+      personal_info: {
+        first_name: emp.first_name,
+        last_name: emp.last_name,
+        date_of_birth: emp.date_of_birth,
+        gender: emp.gender,
+        marital_status: emp.marital_status,
+        blood_group: emp.blood_group,
+      },
+      bank_info: {
+        bank_name: emp.bank_name,
+        bank_number: emp.bank_number,
+        ifsc_number: emp.ifsc_number,
+        pan_number: emp.pan_number,
+        pf_number: emp.pf_number,
+      },
+      contact_info: {
+        phone_number: emp.phoneNumber,
+        alternate_email: emp.alterEmail,
+        address: emp.address,
+        emergency_number: emp.emergencyNumber,
+      },
+    }));
 
-    if (role !== 2 && role !== 3) {
-      const error = new ApiError(400, "You are not admin or super admin!");
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        errors: error.errors,
-        data: error.data,
-      });
-    }
-
-    const [retrieveEmployee] = await promisePool.query(`
-          SELECT 
-            e.employee_id, e.role, e.email, e.password, e.status, e.department,
-            pd.*, 
-            bd.*, 
-            cd.*
-          FROM employees e
-          LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
-          LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
-          LEFT JOIN contact_details cd ON e.employee_id = cd.employee_id
-          `);
-
-    const response = new ApiResponse(200, { status: retrieveEmployee }, `Employee list retrieved successfully`);
-    return res.status(response.statusCode).json({
-      success: response.success,
-      message: response.message,
-      data: response.data.status,
+    // Send a success response
+    return res.status(200).json({
+      success: true,
+      message: "Employee list retrieved successfully.",
+      data: formattedEmployees,
     });
 
   } catch (error) {
-    console.error(error);
-    const errors = new ApiError(500,"An error occurred while retrieving employee data.",error.message);
-    return res.status(errors.statusCode).json({
+    // Handle errors
+    console.error("Error retrieving employee list:", error);
+    return res.status(500).json({
       success: false,
-      message: errors.message,
-      errors: errors.errors,
-      data: errors.data,
+      message: "An error occurred while retrieving employee data.",
+      error: error.message,
     });
   }
 };

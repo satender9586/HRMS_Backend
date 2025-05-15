@@ -430,35 +430,41 @@ const getMonthlyAttendanceSummary = async (req, res) => {
     }
 
     const employee_id = user.employee_id;
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); 
+    const { startDate, endDate } = req.query;
 
-    const monthStart = new Date(year, month, 1);
-    const monthEnd = new Date(year, month + 1, 0);
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required query parameters: startDate or endDate",
+      });
+    }
 
     const formatDate = (date) => date.toISOString().split('T')[0];
-    const monthStartStr = formatDate(monthStart);
-    const monthEndStr = formatDate(monthEnd);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const startStr = formatDate(start);
+    const endStr = formatDate(end);
 
+    // Get attendance summary (Present, Absent, Halfday, Leave)
     const [attendanceSummary] = await promisePool.query(`
       SELECT status, COUNT(*) AS count
       FROM attendence
       WHERE employee_id = ?
         AND DATE(punch_date) BETWEEN ? AND ?
       GROUP BY status
-    `, [employee_id, monthStartStr, monthEndStr]);
+    `, [employee_id, startStr, endStr]);
 
+    // Get all attendance dates
     const [attendanceDatesRows] = await promisePool.query(`
       SELECT DATE(punch_date) AS date
       FROM attendence
       WHERE employee_id = ?
         AND DATE(punch_date) BETWEEN ? AND ?
-    `, [employee_id, monthStartStr, monthEndStr]);
+    `, [employee_id, startStr, endStr]);
 
     const attendanceDates = new Set(attendanceDatesRows.map(row => formatDate(new Date(row.date))));
 
-
+    // Get leave dates
     const [leaveRows] = await promisePool.query(`
       SELECT start_date, end_date
       FROM employee_leaves
@@ -469,57 +475,54 @@ const getMonthlyAttendanceSummary = async (req, res) => {
           (end_date BETWEEN ? AND ?) OR
           (start_date <= ? AND end_date >= ?)
         )
-    `, [
-      employee_id,
-      monthStartStr, monthEndStr,
-      monthStartStr, monthEndStr,
-      monthStartStr, monthEndStr
-    ]);
+    `, [employee_id, startStr, endStr, startStr, endStr, startStr, endStr]);
 
     const leaveDates = new Set();
     for (const row of leaveRows) {
-      const start = new Date(row.start_date) < monthStart ? monthStart : new Date(row.start_date);
-      const end = new Date(row.end_date) > monthEnd ? monthEnd : new Date(row.end_date);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const leaveStart = new Date(row.start_date) < start ? new Date(start) : new Date(row.start_date);
+      const leaveEnd = new Date(row.end_date) > end ? new Date(end) : new Date(row.end_date);
+      for (let d = new Date(leaveStart); d <= leaveEnd; d.setDate(d.getDate() + 1)) {
         leaveDates.add(formatDate(new Date(d)));
       }
     }
 
+    // Get official holidays
     const [holidayRows] = await promisePool.query(`
       SELECT start_date, end_date
       FROM official_holidays
       WHERE start_date <= ? AND end_date >= ?
-    `, [monthEndStr, monthStartStr]);
+    `, [endStr, startStr]);
 
     const officialHolidayDates = new Set();
     for (const row of holidayRows) {
-      const start = new Date(row.start_date) < monthStart ? monthStart : new Date(row.start_date);
-      const end = new Date(row.end_date) > monthEnd ? monthEnd : new Date(row.end_date);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const holidayStart = new Date(row.start_date) < start ? new Date(start) : new Date(row.start_date);
+      const holidayEnd = new Date(row.end_date) > end ? new Date(end) : new Date(row.end_date);
+      for (let d = new Date(holidayStart); d <= holidayEnd; d.setDate(d.getDate() + 1)) {
         officialHolidayDates.add(formatDate(new Date(d)));
       }
     }
 
-
+    // Count only Sundays as weekends
     const weekendDates = new Set();
-    for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
-      const day = d.getDay();
-      if (day === 0 || day === 6) { 
-        weekendDates.add(formatDate(new Date(d)));
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const current = new Date(d); // avoid mutation issue
+      if (current.getDay() === 0) {
+        const dateStr = formatDate(current);
+        weekendDates.add(dateStr);
       }
     }
 
-
+    // Initialize result summary
     const result = {
       Present: 0,
       Absent: 0,
       Leave: leaveDates.size,
       Halfday: 0,
       Weekend: 0,
-      OfficialHoliday: officialHolidayDates.size
+      OfficialHoliday: officialHolidayDates.size,
     };
 
-   
+    // Count attendance statuses (except Leave)
     attendanceSummary.forEach(row => {
       if (row.status === 'Leave') return;
       if (result.hasOwnProperty(row.status)) {
@@ -527,7 +530,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       }
     });
 
-    
+    // Count valid weekend days (only if no attendance, leave or holiday)
     for (const date of weekendDates) {
       if (
         !attendanceDates.has(date) &&
@@ -538,9 +541,9 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       }
     }
 
-
-    let totalDays = 0;
-    for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+    // Count real absents
+    let totalAbsent = 0;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = formatDate(new Date(d));
       if (
         !attendanceDates.has(dateStr) &&
@@ -548,18 +551,23 @@ const getMonthlyAttendanceSummary = async (req, res) => {
         !officialHolidayDates.has(dateStr) &&
         !weekendDates.has(dateStr)
       ) {
-        totalDays++;
+        totalAbsent += 1;
       }
     }
-    result.Absent = totalDays;
+    result.Absent = totalAbsent;
 
     return res.status(200).json({ success: true, data: result });
 
   } catch (error) {
     console.error("Error in monthly summary API:", error);
-    return res.status(500).json({ success: false, message: "Server error while generating summary." });
+    return res.status(500).json({
+      success: false,
+      message: "Server error while generating summary.",
+      error: error.message
+    });
   }
 };
+
 
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
