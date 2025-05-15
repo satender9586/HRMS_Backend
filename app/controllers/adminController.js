@@ -104,7 +104,7 @@ const retriveAllEmployeeList = async (req, res) => {
     });
   }
 
-  // Role validation (only admin or super admin can access)
+
   if (![1, 2].includes(role)) {
     return res.status(403).json({
       success: false,
@@ -113,7 +113,6 @@ const retriveAllEmployeeList = async (req, res) => {
   }
 
   try {
-    // Fetch employees and their related data
     const [employees] = await promisePool.query(`
       SELECT 
         e.employee_id, e.role, e.email, e.status, e.department,

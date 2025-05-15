@@ -1,5 +1,5 @@
 //-------------> DATABASE CREATE QUERY
-const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS EMS";
+const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS HRMS";
 
 //-------------> COMPANY DEPARTMENT CREATE QUERY
 const companyDepartmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS company_departments (

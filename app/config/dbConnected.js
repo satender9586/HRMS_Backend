@@ -53,7 +53,7 @@ async function funDb() {
   try {
     await connectAsync();
     await queryAsync(dbCreatQuery);
-    await queryAsync("USE ems");
+    await queryAsync("USE HRMS");
     await queryAsync(companyDepartmentTableCreateQuery);
     // await queryAsync(departmentInsertQuery);
     await queryAsync(employeeRolesTableCreateQuery);
