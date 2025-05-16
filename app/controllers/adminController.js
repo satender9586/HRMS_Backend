@@ -19,7 +19,7 @@ const makeEmployeeActiveDeactive = async (req, res) => {
       });
     }
 
-    if (role !== 1 && role !== 2) {
+    if (role !== 'Super_Admin' && role !== 'Admin') {
       const error = new ApiError(400, "You are not an admin or super admin!");
       return res.status(error.statusCode).json({
         success: false,
@@ -105,7 +105,7 @@ const retriveAllEmployeeList = async (req, res) => {
   }
 
 
-  if (![1, 2].includes(role)) {
+  if (!['Super_Admin', 'Admin'].includes(role)) {
     return res.status(403).json({
       success: false,
       message: "Access denied. Only admin or super admin can retrieve employee data.",

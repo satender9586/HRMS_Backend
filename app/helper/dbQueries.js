@@ -3,21 +3,23 @@ const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS HRMS";
 
 //-------------> COMPANY DEPARTMENT CREATE QUERY
 const companyDepartmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS company_departments (
-   department_id INT AUTO_INCREMENT PRIMARY KEY,
-   department_name VARCHAR(255) UNIQUE NOT NULL,
+   
+   department_id ENUM('Super_Admin','Admin', 'HR','IT', 'Sales', 'Digital_Marketing','Finance') PRIMARY KEY,
+   department_name VARCHAR(255) NOT NULL UNIQUE,
    description VARCHAR(255) NOT NULL,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )`;
 
+
+
 //-------------> EMPLOYEE ROLES CREATE QUERY
 const employeeRolesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employee_roles (
-   role_id INT AUTO_INCREMENT PRIMARY KEY,
+   role_id ENUM('Super_Admin', 'Admin', 'Employee') PRIMARY KEY,
    role_name VARCHAR(255) NOT NULL,
-   description VARCHAR(255) NOT NULL,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP 
+   description VARCHAR(255) NOT NULL
 )`;
+
 
 //-------------> LEAVE CATEGORIES CREATE QUERY
 const leavesTypesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS leave_categories(
@@ -44,12 +46,13 @@ const employeesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employees (
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   status ENUM('active', 'inactive', 'suspended') DEFAULT 'inactive',
-  role INT NOT NULL,
-  department INT NOT NULL,
+  role ENUM('Super_Admin', 'Admin', 'Employee') NOT NULL,
+  department ENUM('Super_Admin','Admin', 'HR','IT', 'Sales', 'Digital_Marketing','Finance') NULL,
   refreshToken TEXT,
   FOREIGN KEY (department) REFERENCES company_departments(department_id),
   FOREIGN KEY (role) REFERENCES employee_roles(role_id)
 )`;
+
 
 //-------------> ATTENDANCE TABLE CREATE QUERY (Fix Foreign Key)
 const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (

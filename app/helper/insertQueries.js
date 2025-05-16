@@ -1,16 +1,27 @@
 const departmentInsertQuery = `
-    INSERT INTO company_departments(department_name,description)
-    VALUES( 'HR', 'Human Resource'),( 'Emp', 'Employee')
+  INSERT INTO company_departments(department_id, department_name, description)
+  VALUES 
+    ('Super_Admin', 'Super Admin', 'Top-level system access'),
+    ('Admin', 'Admin', 'Administrator with management privileges'),
+    ('HR', 'Human Resources', 'Handles hiring and HR policies'),
+    ('IT', 'IT Department', 'Maintains technical infrastructure'),
+    ('Sales', 'Sales Department', 'Manages customer acquisition and sales'),
+    ('Digital_Marketing', 'Digital Marketing Department', 'Oversees online marketing initiatives'),
+    ('Finance', 'Finance Department', 'Manages financial operations and budgeting');
 `;
+
+
+
 
 const roleInsertQuery = `
    INSERT INTO employee_roles (role_id, role_name, description)
-VALUES
-(0, 'Employee', 'Company Employees'),
-(1, 'Admin', 'Admin'),
-(2, 'Super_Admin', 'Super Admin');
-
+   VALUES
+   ('Super_Admin', 'Super Admin', 'Super administrator role'),
+   ('Admin', 'Admin', 'Administrator role'),
+   ('Employee', 'Company Employees', 'Standard employee role');
 `;
+
+
 const leaveInsertQuery = `
     INSERT INTO leave_categories(leave_name,description)
     VALUES( 'sick', 'emargency leave'),( 'vacation', 'planning leave'),( 'unpaid', 'unpaid leaves')

@@ -11,6 +11,25 @@ const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
 
   try {
+          const validRoles = ['Super_Admin', 'Admin', 'Employee'];
+          const validDepartments = ['Super_Admin', 'Admin', 'HR', 'IT', 'Sales', 'Digital_Marketing', 'Finance'];
+
+        if (typeof role !== 'string' || !role.trim() || !validRoles.includes(role) ||
+            typeof department !== 'string' || !department.trim() || !validDepartments.includes(department
+
+          )
+        ) {
+          const error = new ApiError(400, "Invalid 'role' or 'department'. Must be one of the allowed values.");
+          return res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+            errors: error.errors,
+            data: error.data,
+          });
+        }
+
+
+
    
     if (!email || !password || !role || !department) {
       const error = new ApiError(400,"All fields are required: email, password, role, department");
