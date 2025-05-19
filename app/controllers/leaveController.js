@@ -1,4 +1,5 @@
 const { promisePool } = require("../config/dbConnected.js");
+const {formatDate} = require("../lib/function.js")
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -15,12 +16,14 @@ const applyforLeave = async (req, res) => {
         .json({ success: false, message: "All fields are required!" });
     }
 
-    // Parse input dates and current date
+ 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // normalize to midnight
+    today.setHours(0, 0, 0, 0); 
 
     const start = new Date(start_date);
     const end = new Date(end_date);
+   
+
 
     if (start <= today || end <= today) {
       return res.status(400).json({
@@ -36,7 +39,6 @@ const applyforLeave = async (req, res) => {
       });
     }
 
-    // Check if employee exists
     const isUserCheckQuery = "SELECT * FROM employees WHERE employee_id=?";
     const [isExistUser] = await promisePool.query(isUserCheckQuery, [employee_id]);
 
@@ -46,7 +48,6 @@ const applyforLeave = async (req, res) => {
         .json({ success: false, message: "User does not exist!" });
     }
 
-    // Check if overlapping leave request already exists
     const isLeaveRequestAlreadyQuery = `
       SELECT * FROM employee_leaves 
       WHERE employee_id = ? 
@@ -79,10 +80,8 @@ const applyforLeave = async (req, res) => {
       });
     }
 
-    // Insert leave request
-    const leaveInsertQuery = `
-      INSERT INTO employee_leaves (employee_id, leave_type, start_date, end_date, reason) 
-      VALUES (?, ?, ?, ?, ?)`;
+
+    const leaveInsertQuery = ` INSERT INTO employee_leaves (employee_id, leave_type, start_date, end_date, reason) VALUES (?, ?, ?, ?, ?)`;
 
     const leaveInputData = [employee_id, leave_type, start_date, end_date, reason];
 
@@ -94,7 +93,7 @@ const applyforLeave = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Leave request applied successfully",
-      data: applyForLeaveQuery,
+      data: applyForLeaveQuery.affectedRows,
     });
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
@@ -107,7 +106,36 @@ const applyforLeave = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-  
+const retriveMyAllLeaves = async(req,res)=>{
+  const user = req.user;
+  const userId = req.user.user_id;
+  const employee_id = req.user.employee_id;
+  try {
+    
+    if(!user && !userId && !employee_id){
+      return res.status(404).json({success:false,message:"userId and token is missing!"})
+    }
+
+    const [getAllLeave] = await promisePool.query('SELECT * FROM employee_leaves WHERE employee_id = ?',[employee_id])
+
+    if(getAllLeave.length==0){
+      return res.start(404).json({
+        success:false,
+        message:"leave does not exists!"
+      })
+    }
+
+    return res.status(200).json({success:true, message:"leave fetch successfully!" , data:getAllLeave})
+
+
+  } catch (error) {
+     console.error("Error in retrive My leave API:", error);
+     res.status(500).json({
+        success: false,
+        message: "Something went wrong!",
+     });
+  }
+}
 
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -160,5 +188,5 @@ const approveLeaveRequest = async (req, res) => {
 
 
 
-module.exports = {applyforLeave,approveLeaveRequest}
+module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves}
 

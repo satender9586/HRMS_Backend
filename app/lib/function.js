@@ -12,7 +12,14 @@ const getCurrentDate = () => {
   return `${year}-${month}-${day}`;
 }
 
+//-------------> FROMATED DATE
+
+const formatDate = (date) => {
+  return date.toISOString().split('T')[0]; 
+};
+
 //-------------> ACCESS TOKEN GENERATE FUNCTION
+
 
 const accessTokenGenerate = async (data) => {
   const token = await jwt.sign({ employee_id: data.employee_id, email: data.email, role: data.role, status: data.status }, process.env.ACCESS_TOKEN_SECRET_KEY, { expiresIn: process.env.ACCESS_TOKEN_SECRET_KEY_EXPIRY });
@@ -46,4 +53,4 @@ const generateAccessAndRefreshToken =  async (paramObj)=>{
 //-------------> REFRESH TOKEN GENERATE FUNCTION
 
 
-module.exports = { getCurrentDate,generateAccessAndRefreshToken };
+module.exports = { getCurrentDate,formatDate,generateAccessAndRefreshToken };
