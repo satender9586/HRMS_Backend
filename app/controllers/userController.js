@@ -11,7 +11,7 @@ const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
 
   try {
-          const validRoles = ['Super_Admin', 'Admin', 'Employee'];
+           const validRoles = ['Super_Admin', 'Admin', 'Employee'];
           const validDepartments = ['Super_Admin', 'Admin', 'HR', 'IT', 'Sales', 'Digital_Marketing', 'Finance'];
 
         if (typeof role !== 'string' || !role.trim() || !validRoles.includes(role) ||

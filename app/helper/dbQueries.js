@@ -3,7 +3,6 @@ const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS HRMS";
 
 //-------------> COMPANY DEPARTMENT CREATE QUERY
 const companyDepartmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS company_departments (
-   
    department_id ENUM('Super_Admin','Admin', 'HR','IT', 'Sales', 'Digital_Marketing','Finance') PRIMARY KEY,
    department_name VARCHAR(255) NOT NULL UNIQUE,
    description VARCHAR(255) NOT NULL,
