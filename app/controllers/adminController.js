@@ -118,7 +118,7 @@ const retriveAllEmployeeList = async (req, res) => {
         e.employee_id, e.role, e.email, e.status, e.department,
         pd.first_name, pd.last_name, pd.date_of_birth, pd.gender, pd.marital_status, pd.blood_group,
         bd.bank_name, bd.bank_number, bd.ifsc_number, bd.pan_number, bd.pf_number,
-        cd.phoneNumber, cd.alterEmail, cd.address, cd.emergencyNumber
+        cd.phone_number, cd.alternative_email, cd.address, cd.emergency_number
       FROM employees e
       LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
       LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
@@ -150,10 +150,10 @@ const retriveAllEmployeeList = async (req, res) => {
         pf_number: emp.pf_number,
       },
       contact_info: {
-        phone_number: emp.phoneNumber,
-        alternate_email: emp.alterEmail,
+        phone_number: emp.phone_number,
+        alternate_email: emp.alternative_email,
         address: emp.address,
-        emergency_number: emp.emergencyNumber,
+        emergency_number: emp.emergency_number,
       },
     }));
 

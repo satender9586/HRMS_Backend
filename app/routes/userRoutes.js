@@ -11,13 +11,13 @@ routes.post("/register",userRegister)
 routes.post("/peronal-details",verifyToken,addEmployeeBasicPersonalDetails)
 
 //-------------->>> new user registraion  routes 
-routes.post("/peronal-details",verifyToken,addEmployeeBasicPersonalDetails)
+routes.put("/peronal-details",verifyToken,addEmployeeBasicPersonalDetails)
 
 //-------------->>> new user registraion  routes 
-routes.post("/contact-details",verifyToken,addEmployeeContactDetails)
+routes.put("/contact-details",verifyToken,addEmployeeContactDetails)
 
 //-------------->>> new user registraion  routes 
-routes.post("/bank-details",verifyToken,addEmployeeBankDetails)
+routes.put("/bank-details",verifyToken,addEmployeeBankDetails)
 
 //-------------->>> login user routes 
 routes.post("/login",loginApi)

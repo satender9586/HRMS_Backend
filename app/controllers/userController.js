@@ -212,7 +212,7 @@ const addEmployeeContactDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
 
-  const { phoneNumber, alterEmail, address, emergencyNumber, employee_id } =
+  const { phone_number, alternative_email, address, emergency_number, employee_id } =
     req.body;
 
   try {
@@ -220,10 +220,10 @@ const addEmployeeContactDetails = async (req, res) => {
       !employee_id ||
       !user ||
       !userId ||
-      !phoneNumber ||
-      !alterEmail ||
+      !phone_number ||
+      !alternative_email ||
       !address ||
-      !emergencyNumber
+      !emergency_number
     ) {
       const error = new ApiError(400, "All fields are required!");
       return res.status(error.statusCode).json({
@@ -235,8 +235,8 @@ const addEmployeeContactDetails = async (req, res) => {
     }
 
     const [existingContact] = await promisePool.query(
-      "SELECT * FROM contact_details WHERE phoneNumber = ? OR alterEmail = ?",
-      [phoneNumber, alterEmail]
+      "SELECT * FROM contact_details WHERE phone_number = ? OR alternative_email = ?",
+      [phone_number, alternative_email]
     );
 
     if (existingContact.length > 0) {
@@ -269,9 +269,9 @@ const addEmployeeContactDetails = async (req, res) => {
 
     const [result] = await promisePool.query(
       `INSERT INTO contact_details 
-        (employee_id, phoneNumber, alterEmail, address, emergencyNumber)
+        (employee_id, phone_number, alternative_email, address, emergency_number)
        VALUES (?, ?, ?, ?, ?)`,
-      [employee_id, phoneNumber, alterEmail, address, emergencyNumber]
+      [employee_id, phone_number, alternative_email, address, emergency_number]
     );
     const response = new ApiResponse(
       201,
@@ -584,7 +584,7 @@ const authInfoRetrive = async (req, res) => {
         e.employee_id, e.role, e.email, e.status, e.department,
         pd.first_name, pd.last_name, pd.date_of_birth, pd.gender, pd.marital_status, pd.blood_group,
         bd.bank_name, bd.bank_number, bd.ifsc_number, bd.pan_number, bd.pf_number,
-        cd.phoneNumber, cd.alterEmail, cd.address, cd.emergencyNumber
+        cd.phone_number, cd.alternative_email, cd.address, cd.emergency_number
       FROM employees e
       LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
       LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
@@ -628,10 +628,10 @@ const authInfoRetrive = async (req, res) => {
         pf_number: emp.pf_number,
       },
       contact_info: {
-        phone_number: emp.phoneNumber,
-        alternate_email: emp.alterEmail,
+        phone_number: emp.phone_number,
+        alternate_email: emp.alternative_email,
         address: emp.address,
-        emergency_number: emp.emergencyNumber,
+        emergency_number: emp.emergency_number,
       },
     };
 

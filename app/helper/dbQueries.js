@@ -101,10 +101,10 @@ const employeeBasicPersonalDetails = `CREATE TABLE IF NOT EXISTS personal_detail
 const employeeContactDetails = `CREATE TABLE IF NOT EXISTS contact_details(
   contact_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(20) NOT NULL,
-  phoneNumber VARCHAR(100) UNIQUE,
-  alterEmail VARCHAR(50) UNIQUE,
+  phone_number VARCHAR(100) UNIQUE,
+  alternative_email VARCHAR(50) UNIQUE,
   address VARCHAR(100),
-  emergencyNumber VARCHAR(100),
+  emergency_number VARCHAR(100),
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
