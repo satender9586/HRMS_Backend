@@ -347,6 +347,111 @@ const addEmployeeBankDetails = async (req, res) => {
   }
 };
 
+//-------------> LOGGED USER CONTROLLER
+
+const addOrUpdateEmployeeFullDetails = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+
+  const {
+    employee_id,
+    first_name,
+    last_name,
+    date_of_birth,
+    gender,
+    marital_status,
+    blood_group,
+    phone_number,
+    alternative_email,
+    address,
+    emergency_number,
+    bank_name,
+    bank_number,
+    ifsc_number,
+    pan_number,
+    pf_number,
+  } = req.body;
+
+  try {
+
+    if (
+      !employee_id || !user || !userId ||
+      !first_name || !last_name || !date_of_birth || !gender ||
+      !marital_status || !blood_group ||
+      !phone_number || !alternative_email || !address || !emergency_number ||
+      !bank_name || !bank_number || !ifsc_number || !pan_number || !pf_number
+    ) {
+      const error = new ApiError(400, "All fields are required!");
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+
+    if (isNaN(Date.parse(date_of_birth))) {
+      const error = new ApiError(400, "Invalid date format for date_of_birth!");
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+
+    // Personal Details
+    const [existingPersonal] = await promisePool.query(
+      "SELECT * FROM personal_details WHERE employee_id = ?", [employee_id]
+    );
+
+    if (existingPersonal.length > 0) {
+      await promisePool.query(
+        `UPDATE personal_details SET first_name = ?, last_name = ?, date_of_birth = ?, gender = ?, marital_status = ?, blood_group = ? WHERE employee_id = ?`,
+        [first_name, last_name, date_of_birth, gender, marital_status, blood_group, employee_id]
+      );
+    } else {
+      await promisePool.query(
+        `INSERT INTO personal_details (employee_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [employee_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group]
+      );
+    }
+
+    // Contact Details
+    const [existingContact] = await promisePool.query(
+      "SELECT * FROM contact_details WHERE employee_id = ?", [employee_id]
+    );
+
+    if (existingContact.length > 0) {
+      await promisePool.query(
+        `UPDATE contact_details SET phone_number = ?, alternative_email = ?, address = ?, emergency_number = ? WHERE employee_id = ?`,
+        [phone_number, alternative_email, address, emergency_number, employee_id]
+      );
+    } else {
+      await promisePool.query(
+        `INSERT INTO contact_details (employee_id, phone_number, alternative_email, address, emergency_number) VALUES (?, ?, ?, ?, ?)`,
+        [employee_id, phone_number, alternative_email, address, emergency_number]
+      );
+    }
+
+    // Bank Details
+    const [existingBank] = await promisePool.query(
+      "SELECT * FROM bank_details WHERE employee_id = ?", [employee_id]
+    );
+
+    if (existingBank.length > 0) {
+      await promisePool.query(
+        `UPDATE bank_details SET bank_name = ?, bank_number = ?, ifsc_number = ?, pan_number = ?, pf_number = ? WHERE employee_id = ?`,
+        [bank_name, bank_number, ifsc_number, pan_number, pf_number, employee_id]
+      );
+    } else {
+      await promisePool.query(
+        `INSERT INTO bank_details (employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number) VALUES (?, ?, ?, ?, ?, ?)`,
+        [employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number]
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Employee details added/updated successfully",
+    });
+  } catch (err) {
+    console.error("Database error:", err);
+    const error = new ApiError(500, "Internal server error!");
+    return res.status(error.statusCode).json({ success: false, message: error.message });
+  }
+};
+
 
 //-------------> LOGGED USER CONTROLLER
 
@@ -645,6 +750,7 @@ module.exports = {
   addEmployeeBasicPersonalDetails,
   addEmployeeContactDetails,
   addEmployeeBankDetails,
+  addOrUpdateEmployeeFullDetails,
   loginApi,
   loggedOut,
   refreshAccessToken,
