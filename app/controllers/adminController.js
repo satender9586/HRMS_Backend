@@ -19,7 +19,7 @@ const makeEmployeeActiveDeactive = async (req, res) => {
       });
     }
 
-    if (role !== 'Super_Admin' && role !== 'Admin') {
+    if (role !== "Super_Admin" && role !== "Admin") {
       const error = new ApiError(400, "You are not an admin or super admin!");
       return res.status(error.statusCode).json({
         success: false,
@@ -96,7 +96,6 @@ const makeEmployeeActiveDeactive = async (req, res) => {
 const retriveAllEmployeeList = async (req, res) => {
   const { user_id: userId, role } = req.user || {};
 
-
   if (!userId) {
     return res.status(400).json({
       success: false,
@@ -104,11 +103,11 @@ const retriveAllEmployeeList = async (req, res) => {
     });
   }
 
-
-  if (!['Super_Admin', 'Admin'].includes(role)) {
+  if (!["Super_Admin", "Admin"].includes(role)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied. Only admin or super admin can retrieve employee data.",
+      message:
+        "Access denied. Only admin or super admin can retrieve employee data.",
     });
   }
 
@@ -126,7 +125,7 @@ const retriveAllEmployeeList = async (req, res) => {
     `);
 
     // Format the data into structured objects
-    const formattedEmployees = employees.map(emp => ({
+    const formattedEmployees = employees.map((emp) => ({
       user_info: {
         employee_id: emp.employee_id,
         role: emp.role,
@@ -163,7 +162,6 @@ const retriveAllEmployeeList = async (req, res) => {
       message: "Employee list retrieved successfully.",
       data: formattedEmployees,
     });
-
   } catch (error) {
     // Handle errors
     console.error("Error retrieving employee list:", error);
@@ -175,4 +173,115 @@ const retriveAllEmployeeList = async (req, res) => {
   }
 };
 
-module.exports = { makeEmployeeActiveDeactive, retriveAllEmployeeList };
+const retriveEmployeeProfiles = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const role = user?.role;
+  const employeeId = req.params.empId?.trim();
+
+  try {
+    // Validate user presence
+    if (!user || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID and token missing!",
+        data: null,
+      });
+    }
+
+    // Authorization check
+    if (role !== "Super_Admin" && role !== "Admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied! Only admins allowed.",
+        data: null,
+      });
+    }
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee ID is required.",
+        data: null,
+      });
+    }
+
+    // Query for employee data
+    const [rows] = await promisePool.query(
+      `
+      SELECT 
+        e.employee_id, e.role, e.email, e.status, e.department,
+        pd.first_name, pd.last_name, pd.date_of_birth, pd.gender, pd.marital_status, pd.blood_group,
+        bd.bank_name, bd.bank_number, bd.ifsc_number, bd.pan_number, bd.pf_number,
+        cd.phone_number, cd.alternative_email, cd.address, cd.emergency_number
+      FROM employees e
+      LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
+      LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
+      LEFT JOIN contact_details cd ON e.employee_id = cd.employee_id
+      WHERE e.employee_id = ?
+      `,
+      [employeeId]
+    );
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found.",
+        data: null,
+      });
+    }
+
+    const emp = rows[0];
+    const data = {
+      user_info: {
+        employee_id: emp.employee_id,
+        role: emp.role,
+        email: emp.email,
+        status: emp.status,
+        department: emp.department,
+      },
+      personal_info: {
+        first_name: emp.first_name,
+        last_name: emp.last_name,
+        date_of_birth: emp.date_of_birth,
+        gender: emp.gender,
+        marital_status: emp.marital_status,
+        blood_group: emp.blood_group,
+      },
+      bank_info: {
+        bank_name: emp.bank_name,
+        bank_number: emp.bank_number,
+        ifsc_number: emp.ifsc_number,
+        pan_number: emp.pan_number,
+        pf_number: emp.pf_number,
+      },
+      contact_info: {
+        phone_number: emp.phone_number,
+        alternate_email: emp.alternative_email,
+        address: emp.address,
+        emergency_number: emp.emergency_number,
+      },
+    };
+
+    // ✅ Always return something in the body to avoid 204
+    return res.status(200).json({
+      success: true,
+      message: "Employee profile retrieved successfully.",
+      data: data,
+    });
+  } catch (error) {
+    console.error("Error retrieving profile:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      data: null,
+    });
+  }
+};
+
+
+module.exports = {
+  makeEmployeeActiveDeactive,
+  retriveAllEmployeeList,
+  retriveEmployeeProfiles,
+};

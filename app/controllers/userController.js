@@ -122,6 +122,7 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
   } = req.body;
 
   try {
+    // Validate required fields
     if (
       !employee_id ||
       !user ||
@@ -133,67 +134,70 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
       !marital_status ||
       !blood_group
     ) {
-      const errors = new ApiError(500, "All fields are required!");
+      const errors = new ApiError(400, "All fields are required!");
       return res.status(errors.statusCode).json({
         success: false,
         message: errors.message,
-        errors: errors.errors,
-        data: errors.data,
       });
     }
 
+    // Validate date format
     if (isNaN(Date.parse(date_of_birth))) {
-      const errors = new ApiError(
-        400,
-        "Invalid date format for date_of_birth!"
-      );
+      const errors = new ApiError(400, "Invalid date format for date_of_birth!");
       return res.status(errors.statusCode).json({
         success: false,
         message: errors.message,
-        errors: errors.errors,
-        data: errors.data,
       });
     }
 
+    // Check if record exists
     const [existingDetails] = await promisePool.query(
       "SELECT * FROM personal_details WHERE employee_id = ?",
       [employee_id]
     );
 
+    let message;
     if (existingDetails.length > 0) {
-      const errors = new ApiError(400, "Personal details already exist!");
-      return res.status(errors.statusCode).json({
-        success: false,
-        message: errors.message,
-        errors: errors.errors,
-        data: errors.data,
-      });
+      // Update existing record
+      await promisePool.query(
+        `UPDATE personal_details 
+         SET first_name = ?, last_name = ?, date_of_birth = ?, gender = ?, 
+             marital_status = ?, blood_group = ?
+         WHERE employee_id = ?`,
+        [
+          first_name,
+          last_name,
+          date_of_birth,
+          gender,
+          marital_status,
+          blood_group,
+          employee_id,
+        ]
+      );
+      message = "Personal details updated successfully";
+    } else {
+      // Insert new record
+      await promisePool.query(
+        `INSERT INTO personal_details 
+         (employee_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          employee_id,
+          first_name,
+          last_name,
+          date_of_birth,
+          gender,
+          marital_status,
+          blood_group,
+        ]
+      );
+      message = "Personal details added successfully";
     }
 
-    const [result] = await promisePool.query(
-      `INSERT INTO personal_details 
-        (employee_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        employee_id,
-        first_name,
-        last_name,
-        date_of_birth,
-        gender,
-        marital_status,
-        blood_group,
-      ]
-    );
-
-    const response = new ApiResponse(
-      201,
-      result.insertId,
-      "Personal details added successfully"
-    );
+    const response = new ApiResponse(200, null, message);
     return res.status(response.statusCode).json({
-      success: response.success,
+      success: true,
       message: response.message,
-      data: response.data,
     });
   } catch (err) {
     console.error("Database error:", err);
@@ -201,21 +205,26 @@ const addEmployeeBasicPersonalDetails = async (req, res) => {
     return res.status(errors.statusCode).json({
       success: false,
       message: errors.message,
-      errors: errors.errors,
-      data: errors.data,
     });
   }
 };
+
 
 //-------------> EMPLOYEE CONTACT DETAILS CONTROLLER
 const addEmployeeContactDetails = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
 
-  const { phone_number, alternative_email, address, emergency_number, employee_id } =
-    req.body;
+  const {
+    phone_number,
+    alternative_email,
+    address,
+    emergency_number,
+    employee_id,
+  } = req.body;
 
   try {
+    // Validation
     if (
       !employee_id ||
       !user ||
@@ -229,59 +238,29 @@ const addEmployeeContactDetails = async (req, res) => {
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
-        errors: error.errors,
-        data: error.data,
       });
     }
 
+    // Check if employee already has contact details
     const [existingContact] = await promisePool.query(
-      "SELECT * FROM contact_details WHERE phone_number = ? OR alternative_email = ?",
-      [phone_number, alternative_email]
-    );
-
-    if (existingContact.length > 0) {
-      const error = new ApiError(409, "Phone number or email already exists!");
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        errors: error.errors,
-        data: error.data,
-      });
-    }
-
-    const [userContact] = await promisePool.query(
       "SELECT * FROM contact_details WHERE employee_id = ?",
       [employee_id]
     );
 
-    if (userContact.length > 0) {
-      const error = new ApiError(
-        400,
-        "Contact details already exist for this user!"
+    let message;
+    if (existingContact.length > 0) {
+      await promisePool.query(
+        `UPDATE contact_details
+         SET phone_number = ?, alternative_email = ?, address = ?, emergency_number = ?
+         WHERE employee_id = ?`,
+        [phone_number, alternative_email, address, emergency_number, employee_id]
       );
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        errors: error.errors,
-        data: error.data,
-      });
-    }
-
-    const [result] = await promisePool.query(
-      `INSERT INTO contact_details 
-        (employee_id, phone_number, alternative_email, address, emergency_number)
-       VALUES (?, ?, ?, ?, ?)`,
-      [employee_id, phone_number, alternative_email, address, emergency_number]
-    );
-    const response = new ApiResponse(
-      201,
-      result.insertId,
-      "Contact details added successfully"
-    );
+      message = "Contact details updated successfully";
+    } 
+    const response = new ApiResponse(200, null, message);
     return res.status(response.statusCode).json({
-      success: response.success,
+      success: true,
       message: response.message,
-      data: response.data,
     });
   } catch (err) {
     console.error("Database error:", err);
@@ -289,11 +268,10 @@ const addEmployeeContactDetails = async (req, res) => {
     return res.status(error.statusCode).json({
       success: false,
       message: error.message,
-      errors: error.errors,
-      data: error.data,
     });
   }
 };
+
 
 //-------------> BANK DETAILS CONTROLLER
 
@@ -311,6 +289,7 @@ const addEmployeeBankDetails = async (req, res) => {
   } = req.body;
 
   try {
+    // Validation
     if (
       !employee_id ||
       !user ||
@@ -325,8 +304,6 @@ const addEmployeeBankDetails = async (req, res) => {
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
-        errors: error.errors,
-        data: error.data,
       });
     }
 
@@ -335,30 +312,30 @@ const addEmployeeBankDetails = async (req, res) => {
       [employee_id]
     );
 
+    let message;
     if (existingBank.length > 0) {
-      const error = new ApiError(
-        400,
-        "Bank details already exist for this user!"
+      // Update if record exists
+      await promisePool.query(
+        `UPDATE bank_details
+         SET bank_name = ?, bank_number = ?, ifsc_number = ?, pan_number = ?, pf_number = ?
+         WHERE employee_id = ?`,
+        [bank_name, bank_number, ifsc_number, pan_number, pf_number, employee_id]
       );
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        errors: error.errors,
-        data: error.data,
-      });
+      message = "Bank details updated successfully";
+    } else {
+      // Insert new record
+      const [result] = await promisePool.query(
+        `INSERT INTO bank_details 
+         (employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number]
+      );
+      message = "Bank details added successfully";
     }
 
-    const [result] = await promisePool.query(
-      `INSERT INTO bank_details 
-        (employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number]
-    );
-
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: "Bank details added successfully",
-      bank_id: result.insertId,
+      message,
     });
   } catch (err) {
     console.error("Database error:", err);
@@ -366,11 +343,10 @@ const addEmployeeBankDetails = async (req, res) => {
     return res.status(error.statusCode).json({
       success: false,
       message: error.message,
-      errors: error.errors,
-      data: error.data,
     });
   }
 };
+
 
 //-------------> LOGGED USER CONTROLLER
 
@@ -584,7 +560,7 @@ const authInfoRetrive = async (req, res) => {
         e.employee_id, e.role, e.email, e.status, e.department,
         pd.first_name, pd.last_name, pd.date_of_birth, pd.gender, pd.marital_status, pd.blood_group,
         bd.bank_name, bd.bank_number, bd.ifsc_number, bd.pan_number, bd.pf_number,
-        cd.phone_number, cd.alternative_email, cd.address, cd.emergency_number
+        cd.phoneNumber, cd.alterEmail, cd.address, cd.emergencyNumber
       FROM employees e
       LEFT JOIN personal_details pd ON e.employee_id = pd.employee_id
       LEFT JOIN bank_details bd ON e.employee_id = bd.employee_id
@@ -628,10 +604,10 @@ const authInfoRetrive = async (req, res) => {
         pf_number: emp.pf_number,
       },
       contact_info: {
-        phone_number: emp.phone_number,
-        alternate_email: emp.alternative_email,
+        phone_number: emp.phoneNumber,
+        alternate_email: emp.alterEmail,
         address: emp.address,
-        emergency_number: emp.emergency_number,
+        emergency_number: emp.emergencyNumber,
       },
     };
 

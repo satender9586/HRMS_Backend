@@ -101,7 +101,7 @@ const employeeBasicPersonalDetails = `CREATE TABLE IF NOT EXISTS personal_detail
 const employeeContactDetails = `CREATE TABLE IF NOT EXISTS contact_details(
   contact_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(20) NOT NULL,
-  phone_number VARCHAR(100) UNIQUE,
+  phone_number VARCHAR(100) ,
   alternative_email VARCHAR(50) UNIQUE,
   address VARCHAR(100),
   emergency_number VARCHAR(100),

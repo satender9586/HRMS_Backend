@@ -8,9 +8,6 @@ const { verifyToken } = require("../middleware/authMiddleware.js")
 routes.post("/register",userRegister)
 
 //-------------->>> new user registraion  routes 
-routes.post("/peronal-details",verifyToken,addEmployeeBasicPersonalDetails)
-
-//-------------->>> new user registraion  routes 
 routes.put("/peronal-details",verifyToken,addEmployeeBasicPersonalDetails)
 
 //-------------->>> new user registraion  routes 
