@@ -15,7 +15,8 @@ routes.put("/contact-details",verifyToken,addEmployeeContactDetails)
 
 //-------------->>> new user registraion  routes 
 routes.put("/bank-details",verifyToken,addEmployeeBankDetails)
-//-------------->>> new user registraion  routes 
+
+//-------------->>> add complete profile 
 routes.post("/completeProfile",verifyToken,addOrUpdateEmployeeFullDetails)
 
 //-------------->>> login user routes 
