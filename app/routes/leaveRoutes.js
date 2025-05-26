@@ -1,14 +1,12 @@
 const express = require("express")
-const { applyforLeave,approveLeaveRequest,retriveMyAllLeaves  } = require("../controllers/leaveController");
+const { applyforLeave,approveLeaveRequest,retriveMyAllLeaves, retriveAllLeaves  } = require("../controllers/leaveController");
 const { verifyToken } = require("../middleware/authMiddleware");
 const router = express.Router()
 
-// punch out method
-router.post("/leave-request" ,applyforLeave)
-// punch out method
-router.patch("/approve-leave/:leave_request_id", verifyToken, approveLeaveRequest)
-// punch out method
+router.post("/leave-request" ,verifyToken,applyforLeave)
+router.post("/approve-leave/:leave_request_id", verifyToken, approveLeaveRequest)
 router.get("/myleaves", verifyToken, retriveMyAllLeaves)
+router.get("/allleaves", verifyToken, retriveAllLeaves)
 
 
 

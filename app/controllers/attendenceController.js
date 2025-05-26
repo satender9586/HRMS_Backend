@@ -360,7 +360,7 @@ const retriveAttendence = async (req, res) => {
 
     const result = rows.map((row) => {
       const date = new Date(row.date);
-      const isWeekend = date.getDay() === 0; // Sunday
+      const isWeekend = date.getDay() === 0; 
 
       // If leave is approved, mark attendance as "Leave"
       if (row.leave_type) {

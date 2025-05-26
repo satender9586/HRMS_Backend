@@ -140,6 +140,56 @@ const retriveMyAllLeaves = async(req,res)=>{
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+const retriveAllLeaves = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+  const employee_id = req.user?.employee_id;
+  const role = req.user.role;
+  console.log("user",role)
+  
+
+  try {
+    if (!user || !userId || !employee_id) {
+      return res.status(404).json({
+        success: false,
+        message: "UserId and token are missing!"
+      });
+    }
+
+    if (role !== "Super_Admin" && role !== "Admin") {
+      return res.status(403).json({
+        success: false,
+        message: "you are not admin or super admin!.."
+      });
+    }
+
+    // Admins can see all leaves
+    const [getAllLeaves] = await promisePool.query('SELECT * FROM employee_leaves');
+
+    if (getAllLeaves.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No leave records found!"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Leaves fetched successfully!",
+      data: getAllLeaves
+    });
+
+  } catch (error) {
+    console.error("Error in retrieveAllLeaves API:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong!",
+    });
+  }
+};
+
+
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -188,5 +238,5 @@ const approveLeaveRequest = async (req, res) => {
 
 
 
-module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves}
+module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves,retriveAllLeaves}
 
