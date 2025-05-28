@@ -137,16 +137,13 @@ const retriveMyAllLeaves = async(req,res)=>{
   }
 }
 
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveAllLeaves = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
   const employee_id = req.user?.employee_id;
-  const role = req.user.role;
-  console.log("user",role)
-  
+  const role = req.user.role; 
 
   try {
     if (!user || !userId || !employee_id) {
@@ -163,7 +160,6 @@ const retriveAllLeaves = async (req, res) => {
       });
     }
 
-    // Admins can see all leaves
     const [getAllLeaves] = await promisePool.query('SELECT * FROM employee_leaves');
 
     if (getAllLeaves.length === 0) {
@@ -187,10 +183,6 @@ const retriveAllLeaves = async (req, res) => {
     });
   }
 };
-
-
-
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
