@@ -106,36 +106,46 @@ const applyforLeave = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-const retriveMyAllLeaves = async(req,res)=>{
+const retriveMyAllLeaves = async (req, res) => {
   const user = req.user;
   const userId = req.user.user_id;
   const employee_id = req.user.employee_id;
+
   try {
     
-    if(!user && !userId && !employee_id){
-      return res.status(404).json({success:false,message:"userId and token is missing!"})
+    if (!user || !userId || !employee_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing user data: user, userId or employee_id."
+      });
     }
 
-    const [getAllLeave] = await promisePool.query('SELECT * FROM employee_leaves WHERE employee_id = ?',[employee_id])
+    const [getAllLeave] = await promisePool.query('SELECT * FROM employee_leaves WHERE employee_id = ?', [employee_id]);
 
-    if(getAllLeave.length==0){
-      return res.start(404).json({
-        success:false,
-        message:"leave does not exists!"
-      })
+ 
+    if (getAllLeave.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No leaves found for this employee."
+      });
     }
 
-    return res.status(200).json({success:true, message:"leave fetch successfully!" , data:getAllLeave})
 
+    return res.status(200).json({
+      success: true,
+      message: "Leaves fetched successfully.",
+      data: getAllLeave
+    });
 
   } catch (error) {
-     console.error("Error in retrive My leave API:", error);
-     res.status(500).json({
-        success: false,
-        message: "Something went wrong!",
-     });
+    console.error("Error in retriveMyAllLeaves API:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong. Please try again later."
+    });
   }
-}
+};
+
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
