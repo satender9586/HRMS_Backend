@@ -1,6 +1,7 @@
 const { promisePool } = require("../config/dbConnected");
 const { ApiError } = require("../lib/apiError");
 const { ApiResponse } = require("../lib/apiResponse");
+const {formatDate} = require("../lib/function")
 
 const makeEmployeeActiveDeactive = async (req, res) => {
   const user = req.user;
@@ -172,7 +173,6 @@ const retriveAllEmployeeList = async (req, res) => {
     });
   }
 };
-
 const retriveEmployeeProfiles = async (req, res) => {
   const user = req.user;
   const userId = user?.user_id;
@@ -243,7 +243,7 @@ const retriveEmployeeProfiles = async (req, res) => {
       personal_info: {
         first_name: emp.first_name,
         last_name: emp.last_name,
-        date_of_birth: emp.date_of_birth,
+        date_of_birth: formatDate(emp.date_of_birth),
         gender: emp.gender,
         marital_status: emp.marital_status,
         blood_group: emp.blood_group,
@@ -263,7 +263,7 @@ const retriveEmployeeProfiles = async (req, res) => {
       },
     };
 
-    // ✅ Always return something in the body to avoid 204
+
     return res.status(200).json({
       success: true,
       message: "Employee profile retrieved successfully.",

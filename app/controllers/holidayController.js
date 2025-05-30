@@ -1,10 +1,23 @@
 const { promisePool } = require("../config/dbConnected");
 
 const addHolidays = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const role = user?.role;
   const { holiday_name, description, start_date, end_date } = req.body;
 
   try {
-    if (!holiday_name || !description || !start_date || !end_date) {
+    if (!user || !userId) {
+      const error = new ApiError(400, "userId and token missing!");
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+
+    if (role !== "Super_Admin" && role !== "Admin") {
+      const error = new ApiError(400, "You are not an admin or super admin!");
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+
+      if (!holiday_name || !description || !start_date || !end_date) {
       return res.status(400).json({
         success: false,
         message: "Some required fields are missing!",
@@ -16,16 +29,8 @@ const addHolidays = async (req, res) => {
       FROM official_holidays 
       WHERE (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)
     `;
-    const alreadyHolidayCheckQuery = [
-      start_date,
-      end_date,
-      start_date,
-      end_date,
-    ];
-    const [holidayCheck] = await promisePool.query(
-      isAlreadyHolidayExists,
-      alreadyHolidayCheckQuery
-    );
+    const alreadyHolidayCheckQuery = [start_date, end_date, start_date, end_date];
+    const [holidayCheck] = await promisePool.query(isAlreadyHolidayExists, alreadyHolidayCheckQuery);
 
     if (holidayCheck.length > 0) {
       return res.status(400).json({
@@ -39,11 +44,7 @@ const addHolidays = async (req, res) => {
       VALUES (?, ?, ?, ?)
     `;
     const addHolidaysValue = [holiday_name, description, start_date, end_date];
-
-    const [runAddHolidaysQuery] = await promisePool.query(
-      addHolidaysQuery,
-      addHolidaysValue
-    );
+    const [runAddHolidaysQuery] = await promisePool.query(addHolidaysQuery, addHolidaysValue);
 
     return res.status(200).json({
       success: true,
@@ -59,4 +60,57 @@ const addHolidays = async (req, res) => {
   }
 };
 
-module.exports = { addHolidays };
+const getHolidays = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const role = user?.role;
+  const { year } = req.query;
+
+  try {
+    if (!user || !userId) {
+      const error = new ApiError(400, "userId and token missing!");
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+
+    if (role !== "Super_Admin" && role !== "Admin") {
+      const error = new ApiError(400, "You are not an admin or super admin!");
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+
+    if (!year || isNaN(year) || year.toString().length !== 4) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or missing year! Please provide a 4-digit year.",
+      });
+    }
+
+    const startOfYear = `${year}-01-01`;
+    const endOfYear = `${year}-12-31`;
+
+    const query = `
+      SELECT holiday_id, holiday_name, description, start_date, end_date
+      FROM official_holidays
+      WHERE (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)
+      ORDER BY start_date ASC
+    `;
+
+    const values = [startOfYear, endOfYear, startOfYear, endOfYear];
+    const [holidays] = await promisePool.query(query, values);
+
+    return res.status(200).json({
+      success: true,
+      message: `Holidays for the year ${year} retrieved successfully!`,
+      data: holidays,
+    });
+  } catch (error) {
+    console.error("Error in GET Holidays API:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching holidays!",
+    });
+  }
+};
+
+
+
+module.exports = { addHolidays,getHolidays };

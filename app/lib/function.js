@@ -12,7 +12,7 @@ const getCurrentDate = () => {
   return `${year}-${month}-${day}`;
 }
 
-//-------------> FROMATED DATE
+//-------------> FROMATED DATE >> 2025-04-30
 
 const formatDate = (date) => {
   return date.toISOString().split('T')[0]; 
