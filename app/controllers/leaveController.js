@@ -1,5 +1,5 @@
 const { promisePool } = require("../config/dbConnected.js");
-const {formatDate} = require("../lib/function.js")
+
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -16,22 +16,17 @@ const applyforLeave = async (req, res) => {
         .json({ success: false, message: "All fields are required!" });
     }
 
- 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); 
+    today.setHours(0, 0, 0, 0);
 
     const start = new Date(start_date);
     const end = new Date(end_date);
-   
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
 
+    const startDateStr = start.toISOString().split('T')[0]; 
 
-    if (start <= today || end <= today) {
-      return res.status(400).json({
-        success: false,
-        message: "Leave can only be applied for future dates!",
-      });
-    }
-
+ 
     if (end < start) {
       return res.status(400).json({
         success: false,
@@ -39,7 +34,34 @@ const applyforLeave = async (req, res) => {
       });
     }
 
-    const isUserCheckQuery = "SELECT * FROM employees WHERE employee_id=?";
+
+    if (start.getTime() === today.getTime()) {
+      const isAlreadyPunchedQuery = `
+        SELECT * FROM attendence 
+        WHERE employee_id = ? AND DATE(punch_date) = ?`;
+      const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [
+        employee_id,
+        startDateStr,
+      ]);
+
+      if (alreadyPunched.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already punched in today. Leave cannot be applied.",
+        });
+      }
+    }
+
+  
+    if (start < today) {
+      return res.status(400).json({
+        success: false,
+        message: "Leave can only be applied for today or future dates!",
+      });
+    }
+
+
+    const isUserCheckQuery = "SELECT * FROM employees WHERE employee_id = ?";
     const [isExistUser] = await promisePool.query(isUserCheckQuery, [employee_id]);
 
     if (isExistUser.length === 0) {
@@ -47,6 +69,7 @@ const applyforLeave = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User does not exist!" });
     }
+
 
     const isLeaveRequestAlreadyQuery = `
       SELECT * FROM employee_leaves 
@@ -67,21 +90,25 @@ const applyforLeave = async (req, res) => {
       start_date,
       end_date,
     ];
-    const [isleaveRequestAlready] = await promisePool.query(
+
+    const [isLeaveRequestAlready] = await promisePool.query(
       isLeaveRequestAlreadyQuery,
       leaveRequestDate
     );
 
-    if (isleaveRequestAlready.length > 0) {
+    if (isLeaveRequestAlready.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "A leave request already exists for the specified dates!",
-        data: isleaveRequestAlready,
+        message: "A leave request already exists for the selected dates.",
+        data: isLeaveRequestAlready,
       });
     }
 
 
-    const leaveInsertQuery = ` INSERT INTO employee_leaves (employee_id, leave_type, start_date, end_date, reason) VALUES (?, ?, ?, ?, ?)`;
+    const leaveInsertQuery = `
+      INSERT INTO employee_leaves 
+        (employee_id, leave_type, start_date, end_date, reason) 
+      VALUES (?, ?, ?, ?, ?)`;
 
     const leaveInputData = [employee_id, leave_type, start_date, end_date, reason];
 
@@ -92,9 +119,10 @@ const applyforLeave = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Leave request applied successfully",
+      message: "Leave request submitted successfully.",
       data: applyForLeaveQuery.affectedRows,
     });
+
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
     res.status(500).json({
@@ -146,7 +174,6 @@ const retriveMyAllLeaves = async (req, res) => {
   }
 };
 
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveAllLeaves = async (req, res) => {
@@ -195,13 +222,12 @@ const retriveAllLeaves = async (req, res) => {
 };
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 const approveLeaveRequest = async (req, res) => {
-  const userId = req.user.user_id; 
+  const userId = req.user.user_id;
   const { leave_request_id } = req.params;
-  const { action } = req.body; 
+  const { action } = req.body;
 
-  if (!['Approved', 'Rejected'].includes(action)) {
+  if (!['Approved', 'Rejected', 'Cancelled'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Invalid action' });
   }
 
@@ -219,7 +245,10 @@ const approveLeaveRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: `Leave already ${action.toLowerCase()}` });
     }
 
-    // Update the leave request status
+    if (action.toUpperCase() === 'Cancelled' && (leave.status.toUpperCase() === 'Approved' || leave.status === 'Rejected')) {
+      return res.status(400).json({ success: false, message: `Cannot cancel a ${leave.status.toLowerCase()} leave` });
+    }
+
     await promisePool.query(
       `UPDATE employee_leaves 
        SET status = ?, action_date = NOW(), action_by = ? 
@@ -237,6 +266,7 @@ const approveLeaveRequest = async (req, res) => {
   }
 };
 
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 
 

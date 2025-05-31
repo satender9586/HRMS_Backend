@@ -111,6 +111,54 @@ const getHolidays = async (req, res) => {
   }
 };
 
+const deleteHoliday = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const role = user?.role;
+  const { holidayId } = req.params;
+
+  try {
+    if (!user || !userId) {
+      return res.status(400).json({ success: false, message: "userId and token missing!" });
+    }
+
+    if (role !== "Super_Admin" && role !== "Admin") {
+      return res.status(403).json({ success: false, message: "You are not authorized to delete holidays!" });
+    }
+
+    if (!holidayId || isNaN(holidayId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or missing holiday ID.",
+      });
+    }
+
+    const [result] = await promisePool.query(
+      "DELETE FROM official_holidays WHERE holiday_id = ?",
+      [holidayId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Holiday not found or already deleted.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Holiday deleted successfully!",
+    });
+  } catch (error) {
+    console.error("Error in DELETE Holiday API:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while deleting the holiday!",
+    });
+  }
+};
 
 
-module.exports = { addHolidays,getHolidays };
+
+
+module.exports = { addHolidays,getHolidays,deleteHoliday };

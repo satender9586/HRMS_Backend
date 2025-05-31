@@ -67,13 +67,14 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
-//-------------> EMPLOYEE LEAVES TABLE CREATE QUERY (Fix Foreign Key)
+
+//-------------> EMPLOYEE LEAVES TABLE CREATE QUERY 
 const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_leaves(
     leave_request_id INT AUTO_INCREMENT PRIMARY KEY,            
     employee_id VARCHAR(20) NOT NULL,                                 
     start_date DATE NOT NULL,                           
     end_date DATE NOT NULL,                           
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    status ENUM('pending', 'approved', 'rejected','cancelled') DEFAULT 'pending',
     request_date DATETIME DEFAULT CURRENT_TIMESTAMP,    
     action_date DATETIME,                                                          
     action_by INT, 
