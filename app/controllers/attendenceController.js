@@ -5,67 +5,115 @@ const cron = require('node-cron');
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const punchIn = async (req, res) => {
-  const user = req.user
+  const user = req.user;
   const userId = req.user.user_id;
   const employee_id = req.user.employee_id;
 
   try {
-
-    if (!user || !userId) {
-      return res.status(400).json({ message: "User not authenticated" });
-    }
-    
-
-    if (!userId) {
-      return res
-        .status(404)
-        .json({ success: false, message: "userId is missing!" });
+    if (!user || !userId || !employee_id) {
+      return res.status(400).json({ success: false, message: "User not authenticated" });
     }
 
-    const userfindQuery = "SELECT * FROM employees WHERE employee_id = ?";
-    const [userExists] = await promisePool.query(userfindQuery, [employee_id]);
- 
+
+    const userQuery = "SELECT * FROM employees WHERE employee_id = ?";
+    const [userExists] = await promisePool.query(userQuery, [employee_id]);
 
     if (userExists.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
         message: "User doesn't exist!",
       });
     }
 
-    const currentDate = getCurrentDate();
 
-    const isAlreadyPunchedQuery ="SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?";
-    const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [employee_id,currentDate,]);
-   console.log("alreadyPunched",alreadyPunched)
+    const getCurrentDate = () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const currentDate = getCurrentDate();
+    const currentDay = new Date(currentDate).getDay(); 
+
+
+    if (currentDay === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot punch in on a weekend (Sunday)",
+      });
+    }
+
+ 
+    const holidayQuery = `
+      SELECT * FROM official_holidays
+      WHERE ? BETWEEN start_date AND end_date
+    `;
+    const [holidayCheck] = await promisePool.query(holidayQuery, [currentDate]);
+
+    if (holidayCheck.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Today is an official holiday. Cannot punch in.",
+        holidayInfo: holidayCheck[0],
+      });
+    }
+
+
+    const leaveQuery = `
+      SELECT * FROM employee_leaves
+      WHERE employee_id = ?
+        AND ? BETWEEN start_date AND end_date
+        AND status = 'approved'
+    `;
+    const [leaveCheck] = await promisePool.query(leaveQuery, [employee_id, currentDate]);
+
+    if (leaveCheck.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "You are on approved leave today. Cannot punch in.",
+        leaveInfo: leaveCheck[0],
+      });
+    }
+
+
+    const alreadyPunchedQuery = `
+      SELECT * FROM attendence
+      WHERE employee_id = ? AND DATE(punch_date) = ?
+    `;
+    const [alreadyPunched] = await promisePool.query(alreadyPunchedQuery, [employee_id, currentDate]);
+
     if (alreadyPunched.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "User has already punched in today!",
+        message: "You have already punched in today.",
         punchData: alreadyPunched[0],
         currentDate,
       });
     }
-    const punchInQuery =
-      "INSERT INTO attendence(employee_id, punch_date, punch_in) VALUES(?, ?, CURRENT_TIME)";
-    const inputData = [employee_id, currentDate];
-    const [queryResponse] = await promisePool.query(punchInQuery, inputData);
 
-    const newAttendanceId = queryResponse.insertId;
 
-    const getPunchindata = "SELECT * FROM attendence WHERE attendance_id = ?";
-    const [getPunchStatus] = await promisePool.query(getPunchindata, [
-      newAttendanceId,
-    ]);
+    const insertPunchInQuery = `
+      INSERT INTO attendence (employee_id, punch_date, punch_in)
+      VALUES (?, ?, CURRENT_TIME)
+    `;
+    const [insertResult] = await promisePool.query(insertPunchInQuery, [employee_id, currentDate]);
+    const attendance_id = insertResult.insertId;
+
+
+    const getPunchDataQuery = "SELECT * FROM attendence WHERE attendance_id = ?";
+    const [punchData] = await promisePool.query(getPunchDataQuery, [attendance_id]);
 
     return res.status(200).json({
       success: true,
       message: "Punched in successfully!",
-      punchData: getPunchStatus[0],
+      punchData: punchData[0],
     });
+
   } catch (error) {
     console.error("Error in punch-in API:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Something went wrong!",
     });
@@ -138,54 +186,105 @@ const punchOut = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-const retrivePuncingstatus = async (req, res) => {  
-  const user = req.user
-  const userId = req.user.user_id 
-  const employee_id = req.user.employee_id 
+const retrivePuncingstatus  = async (req, res) => {
+  const user = req.user;
+  const userId = req.user.user_id;
+  const employee_id = req.user.employee_id;
 
   try {
-    if (!userId || !user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User ID is missing" });
-    }
-    
-    const currentDate = new Date();
-    const startOfDay = new Date(currentDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(currentDate.setHours(23, 59, 59, 999));
-
-    const isAttendanceExists =
-      "SELECT * FROM attendence WHERE employee_id = ? AND punch_date BETWEEN ? AND ?";
-
-    const [runAttendanceGetQuery] = await promisePool.query(
-      isAttendanceExists,
-      [employee_id, startOfDay, endOfDay]
-    );
-
-    if (runAttendanceGetQuery.length === 0) {
-      return res.status(404).json({
+    if (!user || !userId || !employee_id) {
+      return res.status(400).json({
         success: false,
+        message: "User not authenticated",
+      });
+    }
+
+ 
+    const getCurrentDate = () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const currentDate = getCurrentDate();
+    const currentDay = new Date(currentDate).getDay(); 
+
+    let isHoliday = false;
+    let holidayType = null;
+    let holidayInfo = null;
+
+ 
+    if (currentDay === 0) {
+      isHoliday = true;
+      holidayType = "Weekend";
+    }
+
+ 
+    const holidayQuery = `
+      SELECT * FROM official_holidays
+      WHERE ? BETWEEN start_date AND end_date
+    `;
+    const [holidayCheck] = await promisePool.query(holidayQuery, [currentDate]);
+
+    if (holidayCheck.length > 0) {
+      isHoliday = true;
+      holidayType = "Official Holiday";
+      holidayInfo = holidayCheck[0];
+    }
+
+
+    const leaveQuery = `
+      SELECT * FROM employee_leaves
+      WHERE employee_id = ?
+        AND ? BETWEEN start_date AND end_date
+        AND status = 'approved'
+    `;
+    const [leaveCheck] = await promisePool.query(leaveQuery, [employee_id, currentDate]);
+
+    if (leaveCheck.length > 0) {
+      isHoliday = true;
+      holidayType = "Leave";
+      holidayInfo = leaveCheck[0];
+    }
+
+  
+    const punchStatusQuery = `
+      SELECT * FROM attendence
+      WHERE employee_id = ? AND DATE(punch_date) = ?
+    `;
+    const [punchData] = await promisePool.query(punchStatusQuery, [employee_id, currentDate]);
+
+    if (punchData.length === 0) {
+      return res.status(400).json({
+        success: true,
         message: "No attendance exists for today",
         data: 0,
+        isHoliday,
+        holidayType,
+        holidayInfo,
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Puching status data",
+      message: "Punching status found",
       data: 1,
-      punchData: runAttendanceGetQuery[0],
+      punchData: punchData[0],
+      isHoliday,
+      holidayType,
+      holidayInfo,
     });
+
   } catch (error) {
-    console.error("Error in attendance API : ", error);
+    console.error("Error in retrivePunchingStatus API:", error);
     return res.status(500).json({
       success: false,
       message: "Something went wrong!",
     });
   }
 };
-
-
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // const retriveAttendence = async (req, res) => {
@@ -568,8 +667,6 @@ const getMonthlyAttendanceSummary = async (req, res) => {
     });
   }
 };
-
-
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 

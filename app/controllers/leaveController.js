@@ -18,15 +18,13 @@ const applyforLeave = async (req, res) => {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
 
     const start = new Date(start_date);
     const end = new Date(end_date);
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
-    const startDateStr = start.toISOString().split('T')[0]; 
-
- 
     if (end < start) {
       return res.status(400).json({
         success: false,
@@ -34,25 +32,7 @@ const applyforLeave = async (req, res) => {
       });
     }
 
-
-    if (start.getTime() === today.getTime()) {
-      const isAlreadyPunchedQuery = `
-        SELECT * FROM attendence 
-        WHERE employee_id = ? AND DATE(punch_date) = ?`;
-      const [alreadyPunched] = await promisePool.query(isAlreadyPunchedQuery, [
-        employee_id,
-        startDateStr,
-      ]);
-
-      if (alreadyPunched.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: "You have already punched in today. Leave cannot be applied.",
-        });
-      }
-    }
-
-  
+    // Check if applying for any date before today
     if (start < today) {
       return res.status(400).json({
         success: false,
@@ -60,28 +40,50 @@ const applyforLeave = async (req, res) => {
       });
     }
 
+    // ⛔ Check if employee has punched in today and trying to apply for leave today
+    if (start <= today && end >= today) {
+      const punchQuery = `
+        SELECT * FROM attendence
+        WHERE employee_id = ? AND DATE(punch_date) = ?
+      `;
+      const [alreadyPunchedToday] = await promisePool.query(punchQuery, [
+        employee_id,
+        todayStr,
+      ]);
 
-    const isUserCheckQuery = "SELECT * FROM employees WHERE employee_id = ?";
-    const [isExistUser] = await promisePool.query(isUserCheckQuery, [employee_id]);
-
-    if (isExistUser.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User does not exist!" });
+      if (alreadyPunchedToday.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already punched in today. Leave cannot include today.",
+        });
+      }
     }
 
+    // Check if employee exists
+    const [userExists] = await promisePool.query(
+      "SELECT * FROM employees WHERE employee_id = ?",
+      [employee_id]
+    );
+    if (userExists.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User does not exist!",
+      });
+    }
 
-    const isLeaveRequestAlreadyQuery = `
-      SELECT * FROM employee_leaves 
-      WHERE employee_id = ? 
+    // Check if leave already exists for selected range
+    const leaveOverlapQuery = `
+      SELECT * FROM employee_leaves
+      WHERE employee_id = ?
         AND (
-          (start_date BETWEEN ? AND ?) 
+          (start_date BETWEEN ? AND ?)
           OR (end_date BETWEEN ? AND ?)
           OR (? BETWEEN start_date AND end_date)
           OR (? BETWEEN start_date AND end_date)
-        )`;
+        )
+    `;
 
-    const leaveRequestDate = [
+    const leaveOverlapParams = [
       employee_id,
       start_date,
       end_date,
@@ -91,96 +93,138 @@ const applyforLeave = async (req, res) => {
       end_date,
     ];
 
-    const [isLeaveRequestAlready] = await promisePool.query(
-      isLeaveRequestAlreadyQuery,
-      leaveRequestDate
+    const [overlappingLeaves] = await promisePool.query(
+      leaveOverlapQuery,
+      leaveOverlapParams
     );
 
-    if (isLeaveRequestAlready.length > 0) {
+    if (overlappingLeaves.length > 0) {
       return res.status(400).json({
         success: false,
         message: "A leave request already exists for the selected dates.",
-        data: isLeaveRequestAlready,
+        data: overlappingLeaves,
       });
     }
 
+    // Insert leave request
+    const insertLeaveQuery = `
+      INSERT INTO employee_leaves (employee_id, leave_type, start_date, end_date, reason)
+      VALUES (?, ?, ?, ?, ?)
+    `;
 
-    const leaveInsertQuery = `
-      INSERT INTO employee_leaves 
-        (employee_id, leave_type, start_date, end_date, reason) 
-      VALUES (?, ?, ?, ?, ?)`;
+    const [result] = await promisePool.query(insertLeaveQuery, [
+      employee_id,
+      leave_type,
+      start_date,
+      end_date,
+      reason,
+    ]);
 
-    const leaveInputData = [employee_id, leave_type, start_date, end_date, reason];
-
-    const [applyForLeaveQuery] = await promisePool.query(
-      leaveInsertQuery,
-      leaveInputData
-    );
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Leave request submitted successfully.",
-      data: applyForLeaveQuery.affectedRows,
+      data: result.insertId,
     });
-
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Something went wrong!",
+      error: error.message,
     });
   }
 };
+
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveMyAllLeaves = async (req, res) => {
   const user = req.user;
-  const userId = req.user.user_id;
-  const employee_id = req.user.employee_id;
+  const userId = req.user?.user_id;
+  const employee_id = req.user?.employee_id;
 
   try {
-    
     if (!user || !userId || !employee_id) {
       return res.status(400).json({
         success: false,
-        message: "Missing user data: user, userId or employee_id."
+        message: "Missing user data: user, userId or employee_id.",
       });
     }
 
-    const [getAllLeave] = await promisePool.query('SELECT * FROM employee_leaves WHERE employee_id = ?', [employee_id]);
+    const query = `
+      SELECT 
+        leave_request_id,
+        employee_id,
+        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+        status,
+        DATE_FORMAT(request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
+        DATE_FORMAT(action_date, '%Y-%m-%d %H:%i:%s') AS action_date,
+        action_by,
+        leave_type,
+        reason,
+        remark,
+        DATEDIFF(end_date, start_date) + 1 AS total_days
+      FROM employee_leaves
+      WHERE employee_id = ?
+      ORDER BY start_date DESC
+    `;
 
- 
+    const [getAllLeave] = await promisePool.query(query, [employee_id]);
+
     if (getAllLeave.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No leaves found for this employee."
+        message: "No leaves found for this employee.",
       });
     }
 
+    const enrichedLeaves = getAllLeave.map((leave) => {
+      const startDate = new Date(leave.start_date);
+      const endDate = new Date(leave.end_date);
+
+      const leave_dates = [];
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        leave_dates.push(current.toISOString().slice(0, 10));
+        current.setDate(current.getDate() + 1);
+      }
+
+
+      const start_day = startDate.toLocaleDateString("en-US", { weekday: "long" });
+      const end_day = endDate.toLocaleDateString("en-US", { weekday: "long" });
+
+      return {
+        ...leave,
+        start_day,
+        end_day,
+        leave_dates
+      };
+    });
 
     return res.status(200).json({
       success: true,
       message: "Leaves fetched successfully.",
-      data: getAllLeave
+      data: enrichedLeaves,
     });
 
   } catch (error) {
     console.error("Error in retriveMyAllLeaves API:", error);
     return res.status(500).json({
       success: false,
-      message: "Something went wrong. Please try again later."
+      message: "Something went wrong. Please try again later.",
     });
   }
 };
 
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-const retriveAllLeaves = async (req, res) => {
+const listAllLeaveApplications = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
   const employee_id = req.user?.employee_id;
-  const role = req.user.role; 
+  const role = req.user?.role;
 
   try {
     if (!user || !userId || !employee_id) {
@@ -193,11 +237,28 @@ const retriveAllLeaves = async (req, res) => {
     if (role !== "Super_Admin" && role !== "Admin") {
       return res.status(403).json({
         success: false,
-        message: "you are not admin or super admin!.."
+        message: "You are not admin or super admin!"
       });
     }
 
-    const [getAllLeaves] = await promisePool.query('SELECT * FROM employee_leaves');
+    const query = `
+      SELECT 
+        leave_request_id,
+        employee_id,
+        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+        status,
+        DATE_FORMAT(request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
+        DATE_FORMAT(action_date, '%Y-%m-%d %H:%i:%s') AS action_date,
+        action_by,
+        leave_type,
+        reason,
+        remark
+      FROM employee_leaves
+      ORDER BY start_date DESC
+    `;
+
+    const [getAllLeaves] = await promisePool.query(query);
 
     if (getAllLeaves.length === 0) {
       return res.status(404).json({
@@ -206,14 +267,43 @@ const retriveAllLeaves = async (req, res) => {
       });
     }
 
+    const enrichedLeaves = getAllLeaves.map((leave) => {
+      const startDate = new Date(leave.start_date);
+      const endDate = new Date(leave.end_date);
+
+     
+      const timeDiff = endDate.getTime() - startDate.getTime();
+      const total_days = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
+
+
+      const leave_dates = [];
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        leave_dates.push(current.toISOString().slice(0, 10));
+        current.setDate(current.getDate() + 1);
+      }
+
+
+      const start_day = startDate.toLocaleDateString("en-US", { weekday: "long" });
+      const end_day = endDate.toLocaleDateString("en-US", { weekday: "long" });
+
+      return {
+        ...leave,
+        total_days,
+        leave_dates,
+        start_day,
+        end_day
+      };
+    });
+
     return res.status(200).json({
       success: true,
       message: "Leaves fetched successfully!",
-      data: getAllLeaves
+      data: enrichedLeaves
     });
 
   } catch (error) {
-    console.error("Error in retrieveAllLeaves API:", error);
+    console.error("Error in retriveAllLeaves API:", error);
     return res.status(500).json({
       success: false,
       message: "Something went wrong!",
@@ -270,5 +360,5 @@ const approveLeaveRequest = async (req, res) => {
 
 
 
-module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves,retriveAllLeaves}
+module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves,listAllLeaveApplications}
 

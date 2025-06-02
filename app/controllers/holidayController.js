@@ -88,7 +88,12 @@ const getHolidays = async (req, res) => {
     const endOfYear = `${year}-12-31`;
 
     const query = `
-      SELECT holiday_id, holiday_name, description, start_date, end_date
+      SELECT
+        holiday_id,
+        holiday_name,
+        description,
+        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date
       FROM official_holidays
       WHERE (start_date BETWEEN ? AND ? OR end_date BETWEEN ? AND ?)
       ORDER BY start_date ASC
