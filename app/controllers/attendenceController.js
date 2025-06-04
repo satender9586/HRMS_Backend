@@ -545,7 +545,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
     const startStr = formatDate(start);
     const endStr = formatDate(end);
 
-    // Get attendance summary (Present, Absent, Halfday, Leave)
+ 
     const [attendanceSummary] = await promisePool.query(`
       SELECT status, COUNT(*) AS count
       FROM attendence
@@ -554,7 +554,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       GROUP BY status
     `, [employee_id, startStr, endStr]);
 
-    // Get all attendance dates
+
     const [attendanceDatesRows] = await promisePool.query(`
       SELECT DATE(punch_date) AS date
       FROM attendence
@@ -564,7 +564,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
 
     const attendanceDates = new Set(attendanceDatesRows.map(row => formatDate(new Date(row.date))));
 
-    // Get leave dates
+
     const [leaveRows] = await promisePool.query(`
       SELECT start_date, end_date
       FROM employee_leaves
@@ -602,17 +602,17 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       }
     }
 
-    // Count only Sundays as weekends
+   
     const weekendDates = new Set();
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const current = new Date(d); // avoid mutation issue
+      const current = new Date(d); 
       if (current.getDay() === 0) {
         const dateStr = formatDate(current);
         weekendDates.add(dateStr);
       }
     }
 
-    // Initialize result summary
+  
     const result = {
       Present: 0,
       Absent: 0,
@@ -622,7 +622,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       OfficialHoliday: officialHolidayDates.size,
     };
 
-    // Count attendance statuses (except Leave)
+ 
     attendanceSummary.forEach(row => {
       if (row.status === 'Leave') return;
       if (result.hasOwnProperty(row.status)) {
@@ -630,7 +630,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       }
     });
 
-    // Count valid weekend days (only if no attendance, leave or holiday)
+
     for (const date of weekendDates) {
       if (
         !attendanceDates.has(date) &&
@@ -641,7 +641,7 @@ const getMonthlyAttendanceSummary = async (req, res) => {
       }
     }
 
-    // Count real absents
+
     let totalAbsent = 0;
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = formatDate(new Date(d));

@@ -5,13 +5,15 @@ const { ApiError } = require("../lib/apiError.js");
 const { ApiResponse } = require("../lib/apiResponse.js");
 const jwt = require("jsonwebtoken");
 
+
+
+
 //-------------> NEW EMPLOYEE REGISTRATION CONTROLLER
 
 const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
-
   try {
-           const validRoles = ['Super_Admin', 'Admin', 'Employee'];
+          const validRoles = ['Super_Admin', 'Admin', 'Employee'];
           const validDepartments = ['Super_Admin', 'Admin', 'HR', 'IT', 'Sales', 'Digital_Marketing', 'Finance'];
 
         if (typeof role !== 'string' || !role.trim() || !validRoles.includes(role) ||
@@ -74,11 +76,7 @@ const userRegister = async (req, res) => {
 
     if (result.affectedRows === 1) {
       const data = {id: result.insertId, email, role,  department,  employeeId: generateId, };
-      const response = new ApiResponse(
-        201,
-        data,
-        "User registered successfully!"
-      );
+      const response = new ApiResponse(201,data,"User registered successfully!");
       return res.status(response.statusCode).json({
         success: response.success,
         message: response.message,
@@ -105,247 +103,6 @@ const userRegister = async (req, res) => {
   }
 };
 
-//-------------> EMPLOYEE PERSONAL DETAILS CONTROLLER
-
-const addEmployeeBasicPersonalDetails = async (req, res) => {
-  const user = req.user;
-  const userId = req.user?.user_id;
-
-  const {
-    first_name,
-    last_name,
-    date_of_birth,
-    gender,
-    marital_status,
-    blood_group,
-    employee_id,
-  } = req.body;
-
-  try {
-    // Validate required fields
-    if (
-      !employee_id ||
-      !user ||
-      !userId ||
-      !first_name ||
-      !last_name ||
-      !date_of_birth ||
-      !gender ||
-      !marital_status ||
-      !blood_group
-    ) {
-      const errors = new ApiError(400, "All fields are required!");
-      return res.status(errors.statusCode).json({
-        success: false,
-        message: errors.message,
-      });
-    }
-
-    // Validate date format
-    if (isNaN(Date.parse(date_of_birth))) {
-      const errors = new ApiError(400, "Invalid date format for date_of_birth!");
-      return res.status(errors.statusCode).json({
-        success: false,
-        message: errors.message,
-      });
-    }
-
-    // Check if record exists
-    const [existingDetails] = await promisePool.query(
-      "SELECT * FROM personal_details WHERE employee_id = ?",
-      [employee_id]
-    );
-
-    let message;
-    if (existingDetails.length > 0) {
-      // Update existing record
-      await promisePool.query(
-        `UPDATE personal_details 
-         SET first_name = ?, last_name = ?, date_of_birth = ?, gender = ?, 
-             marital_status = ?, blood_group = ?
-         WHERE employee_id = ?`,
-        [
-          first_name,
-          last_name,
-          date_of_birth,
-          gender,
-          marital_status,
-          blood_group,
-          employee_id,
-        ]
-      );
-      message = "Personal details updated successfully";
-    } else {
-      // Insert new record
-      await promisePool.query(
-        `INSERT INTO personal_details 
-         (employee_id, first_name, last_name, date_of_birth, gender, marital_status, blood_group)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          employee_id,
-          first_name,
-          last_name,
-          date_of_birth,
-          gender,
-          marital_status,
-          blood_group,
-        ]
-      );
-      message = "Personal details added successfully";
-    }
-
-    const response = new ApiResponse(200, null, message);
-    return res.status(response.statusCode).json({
-      success: true,
-      message: response.message,
-    });
-  } catch (err) {
-    console.error("Database error:", err);
-    const errors = new ApiError(500, "Internal server error!");
-    return res.status(errors.statusCode).json({
-      success: false,
-      message: errors.message,
-    });
-  }
-};
-
-
-//-------------> EMPLOYEE CONTACT DETAILS CONTROLLER
-const addEmployeeContactDetails = async (req, res) => {
-  const user = req.user;
-  const userId = req.user?.user_id;
-
-  const {
-    phone_number,
-    alternative_email,
-    address,
-    emergency_number,
-    employee_id,
-  } = req.body;
-
-  try {
-    // Validation
-    if (
-      !employee_id ||
-      !user ||
-      !userId ||
-      !phone_number ||
-      !alternative_email ||
-      !address ||
-      !emergency_number
-    ) {
-      const error = new ApiError(400, "All fields are required!");
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-      });
-    }
-
-    // Check if employee already has contact details
-    const [existingContact] = await promisePool.query(
-      "SELECT * FROM contact_details WHERE employee_id = ?",
-      [employee_id]
-    );
-
-    let message;
-    if (existingContact.length > 0) {
-      await promisePool.query(
-        `UPDATE contact_details
-         SET phone_number = ?, alternative_email = ?, address = ?, emergency_number = ?
-         WHERE employee_id = ?`,
-        [phone_number, alternative_email, address, emergency_number, employee_id]
-      );
-      message = "Contact details updated successfully";
-    } 
-    const response = new ApiResponse(200, null, message);
-    return res.status(response.statusCode).json({
-      success: true,
-      message: response.message,
-    });
-  } catch (err) {
-    console.error("Database error:", err);
-    const error = new ApiError(500, "Internal server error");
-    return res.status(error.statusCode).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-
-//-------------> BANK DETAILS CONTROLLER
-
-const addEmployeeBankDetails = async (req, res) => {
-  const user = req.user;
-  const userId = req.user?.user_id;
-
-  const {
-    employee_id,
-    bank_name,
-    bank_number,
-    ifsc_number,
-    pan_number,
-    pf_number,
-  } = req.body;
-
-  try {
-    // Validation
-    if (
-      !employee_id ||
-      !user ||
-      !userId ||
-      !bank_name ||
-      !bank_number ||
-      !ifsc_number ||
-      !pan_number ||
-      !pf_number
-    ) {
-      const error = new ApiError(400, "All fields are required!");
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-      });
-    }
-
-    const [existingBank] = await promisePool.query(
-      "SELECT * FROM bank_details WHERE employee_id = ?",
-      [employee_id]
-    );
-
-    let message;
-    if (existingBank.length > 0) {
-      // Update if record exists
-      await promisePool.query(
-        `UPDATE bank_details
-         SET bank_name = ?, bank_number = ?, ifsc_number = ?, pan_number = ?, pf_number = ?
-         WHERE employee_id = ?`,
-        [bank_name, bank_number, ifsc_number, pan_number, pf_number, employee_id]
-      );
-      message = "Bank details updated successfully";
-    } else {
-      // Insert new record
-      const [result] = await promisePool.query(
-        `INSERT INTO bank_details 
-         (employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [employee_id, bank_name, bank_number, ifsc_number, pan_number, pf_number]
-      );
-      message = "Bank details added successfully";
-    }
-
-    return res.status(200).json({
-      success: true,
-      message,
-    });
-  } catch (err) {
-    console.error("Database error:", err);
-    const error = new ApiError(500, "Internal server error!");
-    return res.status(error.statusCode).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
 
 //-------------> COMPLETE FULL INFOMATION OF EMPLOYEE
 
@@ -455,7 +212,7 @@ const addOrUpdateEmployeeFullDetails = async (req, res) => {
 
 //-------------> LOGGED USER CONTROLLER
 
-const loginApi = async (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -748,11 +505,8 @@ const authInfoRetrive = async (req, res) => {
 
 module.exports = {
   userRegister,
-  addEmployeeBasicPersonalDetails,
-  addEmployeeContactDetails,
-  addEmployeeBankDetails,
   addOrUpdateEmployeeFullDetails,
-  loginApi,
+  login,
   loggedOut,
   refreshAccessToken,
   authInfoRetrive,

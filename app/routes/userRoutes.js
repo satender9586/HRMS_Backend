@@ -1,26 +1,18 @@
 const express = require("express")
 const routes = express.Router()
-const {userRegister,addEmployeeBasicPersonalDetails,addEmployeeContactDetails,addEmployeeBankDetails,addOrUpdateEmployeeFullDetails,loginApi,loggedOut,refreshAccessToken, authInfoRetrive}= require("../controllers/userController.js")
+const {userRegister,addOrUpdateEmployeeFullDetails,login,loggedOut,refreshAccessToken, authInfoRetrive}= require("../controllers/userController.js")
 const { verifyToken } = require("../middleware/authMiddleware.js")
 
 
 //-------------->>> new user registraion  routes 
 routes.post("/register",userRegister)
 
-//-------------->>> new user registraion  routes 
-routes.put("/peronal-details",verifyToken,addEmployeeBasicPersonalDetails)
-
-//-------------->>> new user registraion  routes 
-routes.put("/contact-details",verifyToken,addEmployeeContactDetails)
-
-//-------------->>> new user registraion  routes 
-routes.put("/bank-details",verifyToken,addEmployeeBankDetails)
 
 //-------------->>> add complete profile 
 routes.post("/completeProfile",verifyToken,addOrUpdateEmployeeFullDetails)
 
 //-------------->>> login user routes 
-routes.post("/login",loginApi)
+routes.post("/login",login)
 
 //-------------->>> logged out routes 
 routes.post("/logout",verifyToken ,loggedOut)

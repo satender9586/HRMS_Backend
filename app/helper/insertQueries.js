@@ -22,9 +22,5 @@ const roleInsertQuery = `
 `;
 
 
-const leaveInsertQuery = `
-    INSERT INTO leave_categories(leave_name,description)
-    VALUES( 'sick', 'emargency leave'),( 'vacation', 'planning leave'),( 'unpaid', 'unpaid leaves')
-`;
 
-module.exports = { departmentInsertQuery, roleInsertQuery, leaveInsertQuery };
+module.exports = { departmentInsertQuery, roleInsertQuery, };

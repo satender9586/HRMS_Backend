@@ -20,15 +20,6 @@ const employeeRolesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employee_roles
 )`;
 
 
-//-------------> LEAVE CATEGORIES CREATE QUERY
-const leavesTypesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS leave_categories(
-  leave_id INT PRIMARY KEY AUTO_INCREMENT,
-  leave_name VARCHAR(255) NOT NULL,
-  description VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)`;
-
 //-------------> OFFICIAL HOLIDAY CREATE QUERY
 const officialHolidayTableCreateQuery = `CREATE TABLE IF NOT EXISTS official_holidays(
   holiday_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -67,6 +58,17 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
+//-------------> EMPLOYEE LEAVE BALANCE
+const leaveBalaceTablesCreateQuery = `CREATE TABLE leave_balance (
+    employee_id VARCHAR(20),
+    leave_type ENUM('Sick', 'Casual', 'Paid', 'Unpaid'),
+    year YEAR,
+    total_allocated INT DEFAULT 0,
+    used INT DEFAULT 0,
+    remaining INT GENERATED ALWAYS AS (total_allocated - used) STORED,
+    PRIMARY KEY (employee_id, leave_type, year)
+);
+`
 
 //-------------> EMPLOYEE LEAVES TABLE CREATE QUERY 
 const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_leaves(
@@ -136,7 +138,6 @@ module.exports = {
   dbCreatQuery,
   companyDepartmentTableCreateQuery,
   employeeRolesTableCreateQuery,
-  leavesTypesTablesCreateQuery,
   officialHolidayTableCreateQuery,
   employeesTableCreateQuery,
   attendenceTableCreateQuery,
@@ -144,5 +145,6 @@ module.exports = {
   employeeBasicPersonalDetails,
   employeeContactDetails,
   employeebankDetails,
-  employeeDocumentDetails
+  employeeDocumentDetails,
+  leaveBalaceTablesCreateQuery
 };

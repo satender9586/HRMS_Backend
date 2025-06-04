@@ -1,5 +1,10 @@
 const { promisePool } = require("../config/dbConnected.js");
 
+// allocateLeaves  controller
+
+const allocateLeaves = async (req, res) => {
+ 
+};
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -360,5 +365,5 @@ const approveLeaveRequest = async (req, res) => {
 
 
 
-module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves,listAllLeaveApplications}
+module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves,listAllLeaveApplications,allocateLeaves}
 

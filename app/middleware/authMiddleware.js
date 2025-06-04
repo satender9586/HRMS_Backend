@@ -8,9 +8,6 @@ const verifyToken = async (req, res, next) => {
     if (!accessToken) {
       return res.status(401).json({ error: "Access denied. Token missing." });
     }
-
-
-
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET_KEY);
     const [user] = await promisePool.query('SELECT * FROM employees WHERE employee_id = ?', [decoded?.employee_id]);
 
@@ -23,12 +20,11 @@ const verifyToken = async (req, res, next) => {
   } catch (error) {
     console.error("JWT verification failed:", error);
 
-    // Check if the error is related to token expiration
+
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ error: "Token has expired, please login again" });
     }
 
-    // Handle any other errors (e.g., invalid signature, etc.)
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 };

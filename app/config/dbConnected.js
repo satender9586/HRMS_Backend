@@ -3,7 +3,6 @@ const {
   dbCreatQuery,
   companyDepartmentTableCreateQuery,
   employeeRolesTableCreateQuery,
-  leavesTypesTablesCreateQuery,
   officialHolidayTableCreateQuery,
   employeesTableCreateQuery,
   attendenceTableCreateQuery,
@@ -11,7 +10,8 @@ const {
   employeeBasicPersonalDetails,
   employeeContactDetails,
   employeebankDetails,
-  employeeDocumentDetails
+  employeeDocumentDetails,
+  leaveBalaceTablesCreateQuery
 } = require("../helper/dbQueries.js");
 const {
   departmentInsertQuery,
@@ -58,12 +58,11 @@ async function funDb() {
     // await queryAsync(departmentInsertQuery);
     await queryAsync(employeeRolesTableCreateQuery);
     // await queryAsync(roleInsertQuery);
-    await queryAsync(leavesTypesTablesCreateQuery);
-    // await queryAsync(leaveInsertQuery);
     await queryAsync(officialHolidayTableCreateQuery);
     await queryAsync(employeesTableCreateQuery);
     await queryAsync(attendenceTableCreateQuery);
     await queryAsync(employeeLeavesTablesCreateQuery);
+    // await queryAsync(leaveBalaceTablesCreateQuery);
     await queryAsync(employeeBasicPersonalDetails);
     await queryAsync(employeeContactDetails);
     await queryAsync(employeebankDetails);
