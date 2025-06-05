@@ -7,7 +7,6 @@ const jwt = require("jsonwebtoken");
 
 
 
-
 //-------------> NEW EMPLOYEE REGISTRATION CONTROLLER
 
 const userRegister = async (req, res) => {

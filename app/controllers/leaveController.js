@@ -1,135 +1,243 @@
 const { promisePool } = require("../config/dbConnected.js");
+const { ApiError } = require("../lib/apiError.js")
+const { ApiResponse } = require("../lib/apiResponse.js")
+const { isLeaveExistsQuery, updateExistsLeaveQuery, insertAllotedLeaveQuery, isPunchInExistsQuery, } = require("../lib/apiQuery.js")
+const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery } = require("../lib/apiQuery.js")
 
-// allocateLeaves  controller
 
+
+
+// allocate leaves to employees 
 const allocateLeaves = async (req, res) => {
- 
+  const user = req.user;
+  const userId = req.user.user_id;
+  const { employee_id, leave_name, total } = req.body;
+  try {
+
+    // validate authentication
+    if (!user || !userId) {
+      const errors = new ApiError(400, "Missing user data: user, userId anauthorised!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    // validate incomming body fields
+    const isMatchedLeaveIncommingName = ['sick', 'casual', 'unpaid']
+    if (!employee_id || !total || !isMatchedLeaveIncommingName.includes(leave_name)) {
+      const errors = new ApiError(400, " Missing or invalid fields : employee_id, total leaves, leavenames ");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    // cheked is leave already exists or not
+    const [isLeaveExists] = await promisePool.query(isLeaveExistsQuery, [employee_id, leave_name])
+
+    if (isLeaveExists.length > 0) {
+      const [updateLeave] = await promisePool.query(updateExistsLeaveQuery, [total, employee_id, leave_name])
+      const response = new ApiResponse(200, updateLeave.affectedRows, "Leave Balance Update Successfully!");
+      return res.status(response.statusCode).json({
+        success: response.success,
+        message: response.message,
+        data: response.data,
+      });
+    }
+
+    // insert new entry
+    const inserQuery = insertAllotedLeaveQuery
+    const [inserdata] = await promisePool.query(inserQuery, [employee_id, leave_name, total])
+
+    const response = new ApiResponse(200, inserdata.insertId, "Leave allocated succesfully");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
+    });
+
+  } catch (error) {
+    console.error("Error in leave allocated API:", error);
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
+      success: false,
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
+    });
+
+  }
 };
+
+// allocate leaves balance 
+const allocatedLeaveSummary = async (req, res) => {
+  const user = req.user;
+  const userId = req.user.user_id;
+  const employee_id = req.user.employee_id
+  const { leave_name } = req.query;
+  try {
+
+    // validate authentication
+    if (!user || !userId) {
+      const errors = new ApiError(400, "Missing user data: user, userId anauthorised!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    // allotocated leave or remaining summary
+
+
+    const remainingLeaveStatusQuery = `
+      SELECT * FROM leave_balance 
+      WHERE employee_id = ? AND leave_name = ?
+    `;
+
+    const [remainingLeaveStatus] = await promisePool.query(
+      remainingLeaveStatusQuery,
+      [employee_id, leave_name]
+    );
+    const response = new ApiResponse(200, remainingLeaveStatus[0], "Retrive Leave Allocated Summary");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
+    });
+
+
+  } catch (error) {
+    console.error("Error in leave remaining status API:", error);
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
+      success: false,
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
+    });
+  }
+}
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-const applyforLeave = async (req, res) => {
+const leaveRequest = async (req, res) => {
   const user = req.user;
-  const userId = req.user.user_id;
   const employee_id = req.user.employee_id;
   const { leave_type, start_date, end_date, reason } = req.body;
 
   try {
     if (!user || !leave_type || !start_date || !end_date || !reason) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required!" });
+      const errors = new ApiError(400, "Missing user data: leave_type, start_date,end_date,reason anauthorised!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split("T")[0];
+
 
     const start = new Date(start_date);
     const end = new Date(end_date);
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
+
+
     if (end < start) {
-      return res.status(400).json({
+      const errors = new ApiError(400, "End date cannot be earlier than start date!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "End date cannot be earlier than start date!",
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
     // Check if applying for any date before today
     if (start < today) {
-      return res.status(400).json({
+      const errors = new ApiError(400, "Leave can only be applied for today or future dates!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "Leave can only be applied for today or future dates!",
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
-    // ⛔ Check if employee has punched in today and trying to apply for leave today
+    //  Check if employee has punched in today 
     if (start <= today && end >= today) {
-      const punchQuery = `
-        SELECT * FROM attendence
-        WHERE employee_id = ? AND DATE(punch_date) = ?
-      `;
-      const [alreadyPunchedToday] = await promisePool.query(punchQuery, [
-        employee_id,
-        todayStr,
-      ]);
+      const [alreadyPunchedToday] = await promisePool.query(isPunchInExistsQuery, [employee_id, todayStr]);
 
       if (alreadyPunchedToday.length > 0) {
-        return res.status(400).json({
+        const errors = new ApiError(400, "You have already punched in today. Leave cannot include today!");
+        return res.status(errors.statusCode).json({
           success: false,
-          message: "You have already punched in today. Leave cannot include today.",
+          message: errors.message,
+          errors: errors.errors,
+          data: errors.data,
         });
       }
     }
 
     // Check if employee exists
-    const [userExists] = await promisePool.query(
-      "SELECT * FROM employees WHERE employee_id = ?",
-      [employee_id]
-    );
+    const [userExists] = await promisePool.query(checkUserExistsQuery, [employee_id]);
     if (userExists.length === 0) {
-      return res.status(404).json({
+      const errors = new ApiError(404, "User does not exist!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "User does not exist!",
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
     // Check if leave already exists for selected range
-    const leaveOverlapQuery = `
-      SELECT * FROM employee_leaves
-      WHERE employee_id = ?
-        AND (
-          (start_date BETWEEN ? AND ?)
-          OR (end_date BETWEEN ? AND ?)
-          OR (? BETWEEN start_date AND end_date)
-          OR (? BETWEEN start_date AND end_date)
-        )
-    `;
-
-    const leaveOverlapParams = [
-      employee_id,
-      start_date,
-      end_date,
-      start_date,
-      end_date,
-      start_date,
-      end_date,
-    ];
-
-    const [overlappingLeaves] = await promisePool.query(
-      leaveOverlapQuery,
-      leaveOverlapParams
-    );
+    const leaveOverlapParams = [employee_id, start_date, end_date, start_date, end_date, start_date, end_date,];
+    const [overlappingLeaves] = await promisePool.query(leaveOverlapQuery, leaveOverlapParams);
 
     if (overlappingLeaves.length > 0) {
-      return res.status(400).json({
+      const errors = new ApiError(404, "A leave request already exists for the selected dates.");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "A leave request already exists for the selected dates.",
-        data: overlappingLeaves,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    // Check if employee has any pending leave request
+    const [pendingLeaves] = await promisePool.query(pendingLeaveQuery, [employee_id]);
+    if (pendingLeaves.length > 0) {
+      const errors = new ApiError(404, "You already have a pending leave request. Please wait until it is approved or rejected.");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
     // Insert leave request
-    const insertLeaveQuery = `
-      INSERT INTO employee_leaves (employee_id, leave_type, start_date, end_date, reason)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-
-    const [result] = await promisePool.query(insertLeaveQuery, [
-      employee_id,
-      leave_type,
-      start_date,
-      end_date,
-      reason,
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      message: "Leave request submitted successfully.",
-      data: result.insertId,
+    const [result] = await promisePool.query(insertLeaveQuery, [employee_id, leave_type, start_date, end_date, reason,]);
+    const response = new ApiResponse(200, result.insertId, "Leave request submitted successfully.");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
     });
+
   } catch (error) {
     console.error("Error in LEAVE_REQUEST API:", error);
     return res.status(500).json({
@@ -140,7 +248,6 @@ const applyforLeave = async (req, res) => {
   }
 };
 
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveMyAllLeaves = async (req, res) => {
@@ -149,12 +256,17 @@ const retriveMyAllLeaves = async (req, res) => {
   const employee_id = req.user?.employee_id;
 
   try {
-    if (!user || !userId || !employee_id) {
-      return res.status(400).json({
+    // validate authentication
+    if (!user || !userId) {
+      const errors = new ApiError(400, "Missing user data: user, userId anauthorised!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "Missing user data: user, userId or employee_id.",
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
+
 
     const query = `
       SELECT 
@@ -178,9 +290,12 @@ const retriveMyAllLeaves = async (req, res) => {
     const [getAllLeave] = await promisePool.query(query, [employee_id]);
 
     if (getAllLeave.length === 0) {
-      return res.status(404).json({
+      const errors = new ApiError(404, "No leaves found for this employee");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "No leaves found for this employee.",
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
@@ -195,33 +310,34 @@ const retriveMyAllLeaves = async (req, res) => {
         current.setDate(current.getDate() + 1);
       }
 
-
-      const start_day = startDate.toLocaleDateString("en-US", { weekday: "long" });
+      const start_day = startDate.toLocaleDateString("en-US", { weekday: "long", });
       const end_day = endDate.toLocaleDateString("en-US", { weekday: "long" });
 
       return {
         ...leave,
         start_day,
         end_day,
-        leave_dates
+        leave_dates,
       };
     });
 
-    return res.status(200).json({
-      success: true,
-      message: "Leaves fetched successfully.",
-      data: enrichedLeaves,
+    const response = new ApiResponse(200, enrichedLeaves, "Leaves fetched successfully.");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
     });
-
   } catch (error) {
-    console.error("Error in retriveMyAllLeaves API:", error);
-    return res.status(500).json({
+    console.error("Error in retrive all leaves API:", error);
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
       success: false,
-      message: "Something went wrong. Please try again later.",
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
     });
   }
 };
-
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -233,16 +349,22 @@ const listAllLeaveApplications = async (req, res) => {
 
   try {
     if (!user || !userId || !employee_id) {
-      return res.status(404).json({
+      const errors = new ApiError(404, "UserId and token are missing!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "UserId and token are missing!"
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
     if (role !== "Super_Admin" && role !== "Admin") {
-      return res.status(403).json({
+      const errors = new ApiError(404, "You are not admin or super admin!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "You are not admin or super admin!"
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
@@ -266,9 +388,12 @@ const listAllLeaveApplications = async (req, res) => {
     const [getAllLeaves] = await promisePool.query(query);
 
     if (getAllLeaves.length === 0) {
-      return res.status(404).json({
+      const errors = new ApiError(404, "No leave records found!");
+      return res.status(errors.statusCode).json({
         success: false,
-        message: "No leave records found!"
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
       });
     }
 
@@ -276,10 +401,8 @@ const listAllLeaveApplications = async (req, res) => {
       const startDate = new Date(leave.start_date);
       const endDate = new Date(leave.end_date);
 
-     
       const timeDiff = endDate.getTime() - startDate.getTime();
       const total_days = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
-
 
       const leave_dates = [];
       const current = new Date(startDate);
@@ -288,30 +411,29 @@ const listAllLeaveApplications = async (req, res) => {
         current.setDate(current.getDate() + 1);
       }
 
-
-      const start_day = startDate.toLocaleDateString("en-US", { weekday: "long" });
+      const start_day = startDate.toLocaleDateString("en-US", {
+        weekday: "long",
+      });
       const end_day = endDate.toLocaleDateString("en-US", { weekday: "long" });
-
-      return {
-        ...leave,
-        total_days,
-        leave_dates,
-        start_day,
-        end_day
-      };
+      return {...leave,total_days,leave_dates,start_day,end_day,};
     });
 
-    return res.status(200).json({
-      success: true,
-      message: "Leaves fetched successfully!",
-      data: enrichedLeaves
+
+    const response = new ApiResponse(200, enrichedLeaves, "Leaves fetched successfully!");
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
     });
 
   } catch (error) {
     console.error("Error in retriveAllLeaves API:", error);
-    return res.status(500).json({
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
       success: false,
-      message: "Something went wrong!",
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
     });
   }
 };
@@ -322,48 +444,104 @@ const approveLeaveRequest = async (req, res) => {
   const { leave_request_id } = req.params;
   const { action } = req.body;
 
-  if (!['Approved', 'Rejected', 'Cancelled'].includes(action)) {
-    return res.status(400).json({ success: false, message: 'Invalid action' });
+  const validActions = ["approved", "rejected", "cancelled"];
+  const actionLower = action?.toLowerCase();
+
+  if (!validActions.includes(actionLower)) {
+     const errors = new ApiError(404, "Invalid action!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
   }
 
   try {
-    const [[leave]] = await promisePool.query(
-      'SELECT * FROM employee_leaves WHERE leave_request_id = ?',
-      [leave_request_id]
-    );
+    const [[leave]] = await promisePool.query("SELECT * FROM employee_leaves WHERE leave_request_id = ?",[leave_request_id]);
 
     if (!leave) {
-      return res.status(404).json({ success: false, message: 'Leave request not found' });
+      const errors = new ApiError(404, "Leave request not found!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
     }
 
-    if (leave.status === action) {
-      return res.status(400).json({ success: false, message: `Leave already ${action.toLowerCase()}` });
+    const currentStatus = leave.status.toLowerCase();
+
+    if (currentStatus === actionLower) {
+      const errors = new ApiError(404, `Leave already ${actionLower}`);
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
     }
 
-    if (action.toUpperCase() === 'Cancelled' && (leave.status.toUpperCase() === 'Approved' || leave.status === 'Rejected')) {
-      return res.status(400).json({ success: false, message: `Cannot cancel a ${leave.status.toLowerCase()} leave` });
+    if (actionLower === "cancelled" && (currentStatus === "approved" || currentStatus === "rejected")) {
+      const errors = new ApiError(400, `Cannot cancel a ${currentStatus} leave`);
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
     }
 
-    await promisePool.query(
-      `UPDATE employee_leaves 
-       SET status = ?, action_date = NOW(), action_by = ? 
-       WHERE leave_request_id = ?`,
-      [action, userId, leave_request_id]
-    );
 
-    res.status(200).json({
-      success: true,
-      message: `Leave ${action.toLowerCase()} and leave request updated.`
+    if (actionLower === "approved" && currentStatus === "cancelled" ) {
+      const errors = new ApiError(400, `Cannot approve a cancelled leave`);
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+
+    if (actionLower === "rejected" && currentStatus === "approved") {
+      const errors = new ApiError(400, `Cannot reject an already approved leave`);
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    await promisePool.query(`UPDATE employee_leaves SET status = ?, action_date = NOW(), action_by = ? WHERE leave_request_id = ?`,[actionLower, userId, leave_request_id]);
+    const response = new ApiResponse(200, enrichedLeaves, `Leave ${actionLower} and leave request updated.`);
+    return res.status(response.statusCode).json({
+      success: response.success,
+      message: response.message,
+      data: response.data,
     });
+
   } catch (error) {
-    console.error('Error approving leave:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+     console.error("Error updating leave status:", error);
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
+      success: false,
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
+    });
   }
 };
 
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-
-
-module.exports = {applyforLeave,approveLeaveRequest,retriveMyAllLeaves,listAllLeaveApplications,allocateLeaves}
-
+module.exports = {
+  leaveRequest,
+  approveLeaveRequest,
+  retriveMyAllLeaves,
+  listAllLeaveApplications,
+  allocateLeaves,
+  allocatedLeaveSummary
+};
