@@ -17,6 +17,14 @@ const formatDate = (date) => {
 };
 
 
+//-------------> ACCESS TOKEN GENERATE FUNCTION
+ const getDiffInTwoDates = (start, end)=> {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const diffInDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))+1;
+    return diffInDays;
+};
 
 
 //-------------> ACCESS TOKEN GENERATE FUNCTION
@@ -52,4 +60,4 @@ const generateAccessAndRefreshToken =  async (paramObj)=>{
 //-------------> REFRESH TOKEN GENERATE FUNCTION
 
 
-module.exports = { getCurrentDate,formatDate,generateAccessAndRefreshToken };
+module.exports = { getCurrentDate,formatDate,generateAccessAndRefreshToken,getDiffInTwoDates };
