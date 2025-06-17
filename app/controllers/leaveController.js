@@ -1,9 +1,9 @@
 const { promisePool } = require("../config/dbConnected.js");
 const { ApiError } = require("../lib/apiError.js")
 const { ApiResponse } = require("../lib/apiResponse.js")
-const { isLeaveExistsQuery, updateExistsLeaveQuery, insertAllotedLeaveQuery, isPunchInExistsQuery, } = require("../lib/apiQuery.js")
-const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery } = require("../lib/apiQuery.js")
-const { getDiffInTwoDates } = require("../lib/function.js");
+const { isLeaveExistsQuery, updateExistsLeaveQuery, insertAllotedLeaveQuery, isPunchInExistsQuery, retriveAllLeavesRequestsQuery, } = require("../lib/apiQuery.js")
+const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery,retriveMyAllLeavesQuery } = require("../lib/apiQuery.js")
+const { getDiffInTwoDates,getCurrentDate } = require("../lib/function.js");
 
 
 
@@ -139,12 +139,11 @@ const leaveRequest = async (req, res) => {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
 
+    const currentData = getCurrentDate()
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
-
     const start = new Date(start_date);
     const end = new Date(end_date);
+    today.setHours(0, 0, 0, 0);
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
@@ -162,24 +161,14 @@ const leaveRequest = async (req, res) => {
 
   
     if (start <= today && end >= today) {
-      const [alreadyPunchedToday] = await promisePool.query(isPunchInExistsQuery, [employee_id, todayStr]);
+      const [alreadyPunchedToday] = await promisePool.query(isPunchInExistsQuery, [employee_id,currentData]);
       if (alreadyPunchedToday.length > 0) {
         const error = new ApiError(400, "You have already punched in today. Leave cannot include today.");
         return res.status(error.statusCode).json({ success: false, message: error.message });
       }
     }
-
    
-    const [userExists] = await promisePool.query(checkUserExistsQuery, [employee_id]);
-    if (userExists.length === 0) {
-      const error = new ApiError(404, "User does not exist.");
-      return res.status(error.statusCode).json({ success: false, message: error.message });
-    }
-
-    const leaveOverlapParams = [
-      employee_id, start_date, end_date,
-      start_date, end_date, start_date, end_date,
-    ];
+    const leaveOverlapParams = [employee_id, start_date, end_date,start_date, end_date, start_date, end_date];
     const [overlappingLeaves] = await promisePool.query(leaveOverlapQuery, leaveOverlapParams);
 
     if (overlappingLeaves.length > 0) {
@@ -192,7 +181,6 @@ const leaveRequest = async (req, res) => {
         return res.status(error.statusCode).json({ success: false, message: error.message });
       }
     }
-
 
     const [pendingLeaves] = await promisePool.query(pendingLeaveQuery, [employee_id]);
     if (pendingLeaves.length > 0) {
@@ -218,15 +206,9 @@ const leaveRequest = async (req, res) => {
     }
 
  
-    await promisePool.query(
-      'UPDATE leave_balance SET used = used + ? WHERE employee_id = ? AND leave_name = ?',
-      [dateDiff, employee_id, leave_type]
-    );
+    await promisePool.query('UPDATE leave_balance SET used = used + ? WHERE employee_id = ? AND leave_name = ?',[dateDiff, employee_id, leave_type]);
 
-  
-    const [result] = await promisePool.query(insertLeaveQuery, [
-      employee_id, leave_type, start_date, end_date, reason
-    ]);
+    const [result] = await promisePool.query(insertLeaveQuery, [employee_id, leave_type, start_date, end_date, reason,currentData]);
 
     const response = new ApiResponse(200, result.insertId, "Leave request submitted successfully.");
     return res.status(response.statusCode).json({
@@ -245,7 +227,6 @@ const leaveRequest = async (req, res) => {
   }
 };
 
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 const retriveMyAllLeaves = async (req, res) => {
@@ -254,7 +235,7 @@ const retriveMyAllLeaves = async (req, res) => {
   const employee_id = req.user?.employee_id;
 
   try {
-    // validate authentication
+  
     if (!user || !userId) {
       const errors = new ApiError(400, "Missing user data: user, userId anauthorised!");
       return res.status(errors.statusCode).json({
@@ -265,28 +246,7 @@ const retriveMyAllLeaves = async (req, res) => {
       });
     }
 
-
-    const query = `
-      SELECT 
-        leave_request_id,
-        employee_id,
-        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
-        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
-        status,
-        DATE_FORMAT(request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
-        DATE_FORMAT(action_date, '%Y-%m-%d %H:%i:%s') AS action_date,
-        action_by,
-        leave_type,
-        reason,
-        remark,
-        DATEDIFF(end_date, start_date) + 1 AS total_days
-      FROM employee_leaves
-      WHERE employee_id = ?
-      ORDER BY start_date DESC
-    `;
-
-    const [getAllLeave] = await promisePool.query(query, [employee_id]);
-
+    const [getAllLeave] = await promisePool.query(retriveMyAllLeavesQuery, [employee_id]);
     if (getAllLeave.length === 0) {
       const errors = new ApiError(404, "No leaves found for this employee");
       return res.status(errors.statusCode).json({
@@ -297,29 +257,7 @@ const retriveMyAllLeaves = async (req, res) => {
       });
     }
 
-    const enrichedLeaves = getAllLeave.map((leave) => {
-      const startDate = new Date(leave.start_date);
-      const endDate = new Date(leave.end_date);
-
-      const leave_dates = [];
-      const current = new Date(startDate);
-      while (current <= endDate) {
-        leave_dates.push(current.toISOString().slice(0, 10));
-        current.setDate(current.getDate() + 1);
-      }
-
-      const start_day = startDate.toLocaleDateString("en-US", { weekday: "long", });
-      const end_day = endDate.toLocaleDateString("en-US", { weekday: "long" });
-
-      return {
-        ...leave,
-        start_day,
-        end_day,
-        leave_dates,
-      };
-    });
-
-    const response = new ApiResponse(200, enrichedLeaves, "Leaves fetched successfully.");
+    const response = new ApiResponse(200, getAllLeave, "Leaves fetched successfully.");
     return res.status(response.statusCode).json({
       success: response.success,
       message: response.message,
@@ -366,24 +304,8 @@ const listAllLeaveApplications = async (req, res) => {
       });
     }
 
-    const query = `
-      SELECT 
-        leave_request_id,
-        employee_id,
-        DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
-        DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
-        status,
-        DATE_FORMAT(request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
-        DATE_FORMAT(action_date, '%Y-%m-%d %H:%i:%s') AS action_date,
-        action_by,
-        leave_type,
-        reason,
-        remark
-      FROM employee_leaves
-      ORDER BY start_date DESC
-    `;
 
-    const [getAllLeaves] = await promisePool.query(query);
+    const [getAllLeaves] = await promisePool.query(retriveAllLeavesRequestsQuery);
 
     if (getAllLeaves.length === 0) {
       const errors = new ApiError(404, "No leave records found!");
@@ -395,29 +317,7 @@ const listAllLeaveApplications = async (req, res) => {
       });
     }
 
-    const enrichedLeaves = getAllLeaves.map((leave) => {
-      const startDate = new Date(leave.start_date);
-      const endDate = new Date(leave.end_date);
-
-      const timeDiff = endDate.getTime() - startDate.getTime();
-      const total_days = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
-
-      const leave_dates = [];
-      const current = new Date(startDate);
-      while (current <= endDate) {
-        leave_dates.push(current.toISOString().slice(0, 10));
-        current.setDate(current.getDate() + 1);
-      }
-
-      const start_day = startDate.toLocaleDateString("en-US", {
-        weekday: "long",
-      });
-      const end_day = endDate.toLocaleDateString("en-US", { weekday: "long" });
-      return {...leave,total_days,leave_dates,start_day,end_day,};
-    });
-
-
-    const response = new ApiResponse(200, enrichedLeaves, "Leaves fetched successfully!");
+    const response = new ApiResponse(200, getAllLeaves, "Leaves fetched successfully!");
     return res.status(response.statusCode).json({
       success: response.success,
       message: response.message,
@@ -443,72 +343,102 @@ const LeaveAction = async (req, res) => {
   const { action } = req.body;
 
   const validActions = ["approved", "rejected", "cancelled"];
-  const actionLower = action?.toLowerCase();
+  const selectedAction = action?.toLowerCase();
 
-  if (!validActions.includes(actionLower)) {
-    const error = new ApiError(400, "Invalid action!");
-    return res.status(error.statusCode).json({ success: false, message: error.message });
+  if (!validActions.includes(selectedAction)) {
+    return res.status(400).json({ success: false, message: "Invalid action!" });
   }
 
   try {
-    const [[leave]] = await promisePool.query("SELECT * FROM employee_leaves WHERE leave_request_id = ?",[leave_request_id]);
+    const [[leave]] = await promisePool.query(
+      "SELECT * FROM employee_leaves WHERE leave_request_id = ?",
+      [leave_request_id]
+    );
 
     if (!leave) {
-      const error = new ApiError(404, "Leave request not found!");
-      return res.status(error.statusCode).json({ success: false, message: error.message });
+      return res.status(404).json({ success: false, message: "Leave request not found!" });
     }
 
-    const currentStatus = leave.status.toLowerCase();
+    const leaveStatus = leave.status.toLowerCase();
+    const currentDate = new Date();
+    const leaveStartDate = new Date(leave.start_date);
+    const leaveEndDate = new Date(leave.end_date);
+
+
+    if (leaveStatus === selectedAction) {
+      return res.status(400).json({
+        success: false,
+        message: `Leave is already ${selectedAction}.`,
+      });
+    }
+
+
+    if (leaveStatus === "cancelled" && (selectedAction === "approved" || selectedAction === "rejected")) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot ${selectedAction} a leave that is cancelled.`,
+      });
+    }
 
  
-    if (currentStatus === actionLower) {
-      const error = new ApiError(400, `Leave already ${actionLower}`);
-      return res.status(error.statusCode).json({ success: false, message: error.message });
+    if (leaveStatus === "approved" && selectedAction === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel an approved leave.`,
+      });
     }
 
-
-    if (actionLower === "approved" && currentStatus === "cancelled") {
-      return res.status(400).json({ success: false, message: "Cannot approve a cancelled leave." });
+ 
+    if (selectedAction === "cancelled" && currentDate > leaveEndDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot cancel leave after the leave period has ended.",
+      });
     }
 
-    if (actionLower === "rejected" && currentStatus === "approved") {
-      return res.status(400).json({ success: false, message: "Cannot reject an already approved leave." });
-    }
-
-     if (actionLower === "cancelled" && currentStatus === "approved") {
+    if (leaveStatus === "pending" && selectedAction === "cancelled") {
       const employeeId = leave.employee_id;
       const leaveType = leave.leave_type;
-      const dateDiff = getDiffInTwoDates(leave.start_date, leave.end_date);
-      await promisePool.query(`UPDATE leave_balance SET used = used - ? WHERE employee_id = ? AND leave_name = ?`,
+      const dateDiff = getDiffInTwoDates(leave.start_date, leave.end_date); 
+      await promisePool.query(
+        `UPDATE leave_balance SET used = used - ? WHERE employee_id = ? AND leave_name = ?`,
         [dateDiff, employeeId, leaveType]
       );
     }
 
+
     await promisePool.query(
       `UPDATE employee_leaves SET status = ?, action_date = NOW(), action_by = ? WHERE leave_request_id = ?`,
-      [actionLower, userId, leave_request_id]
+      [selectedAction, userId, leave_request_id]
     );
 
-    const response = new ApiResponse(200, null, `Leave ${actionLower} and request updated successfully.`);
-    return res.status(response.statusCode).json({
+    return res.status(200).json({
       success: true,
-      message: response.message,
+      message: `Leave request successfully ${selectedAction}.`,
       data: null,
     });
 
   } catch (error) {
     console.error("Error updating leave status:", error);
-    const apiError = new ApiError(500, "Something went wrong!");
-    return res.status(apiError.statusCode).json({
+    return res.status(500).json({
       success: false,
-      message: apiError.message,
+      message: "Something went wrong!",
       error: error.message,
     });
   }
 };
 
 
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+//  const employeeId = leave.employee_id;
+//       const leaveType = leave.leave_type;
+//       const dateDiff = getDiffInTwoDates(leave.start_date, leave.end_date);
+//       await promisePool.query(`UPDATE leave_balance SET used = used - ? WHERE employee_id = ? AND leave_name = ?`,
+//         [dateDiff, employeeId, leaveType]
+
 
 module.exports = {
   leaveRequest,
@@ -518,3 +448,4 @@ module.exports = {
   allocateLeaves,
   allocatedLeaveSummary
 };
+

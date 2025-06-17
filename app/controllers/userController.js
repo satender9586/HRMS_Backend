@@ -12,28 +12,15 @@ const jwt = require("jsonwebtoken");
 const userRegister = async (req, res) => {
   const { email, password, role, department } = req.body;
   try {
-          const validRoles = ['Super_Admin', 'Admin', 'Employee'];
-          const validDepartments = ['Super_Admin', 'Admin', 'HR', 'IT', 'Sales', 'Digital_Marketing', 'Finance'];
+    const validRoles = ['Super_Admin', 'Admin', 'Employee'];
+    const validDepartments = ['Super_Admin', 'Admin', 'HR', 'IT', 'Sales', 'Digital_Marketing', 'Finance'];
 
-        if (typeof role !== 'string' || !role.trim() || !validRoles.includes(role) ||
-            typeof department !== 'string' || !department.trim() || !validDepartments.includes(department
+    if (typeof role !== 'string' || !role.trim() || !validRoles.includes(role) ||
+      typeof department !== 'string' || !department.trim() || !validDepartments.includes(department
 
-          )
-        ) {
-          const error = new ApiError(400, "Invalid 'role' or 'department'. Must be one of the allowed values.");
-          return res.status(error.statusCode).json({
-            success: false,
-            message: error.message,
-            errors: error.errors,
-            data: error.data,
-          });
-        }
-
-
-
-   
-    if (!email || !password || !role || !department) {
-      const error = new ApiError(400,"All fields are required: email, password, role, department");
+      )
+    ) {
+      const error = new ApiError(400, "Invalid 'role' or 'department'. Must be one of the allowed values.");
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
@@ -42,7 +29,20 @@ const userRegister = async (req, res) => {
       });
     }
 
-    const [userExists] = await promisePool.query("SELECT * FROM employees WHERE email = ?",[email]);
+
+
+
+    if (!email || !password || !role || !department) {
+      const error = new ApiError(400, "All fields are required: email, password, role, department");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+    const [userExists] = await promisePool.query("SELECT * FROM employees WHERE email = ?", [email]);
 
     if (userExists.length > 0) {
       const error = new ApiError(400, "Email already exists!");
@@ -56,10 +56,10 @@ const userRegister = async (req, res) => {
 
     const generateId = await generateEmployeeId();
 
-    const [existingId] = await promisePool.query("SELECT * FROM employees WHERE employee_id = ?",[generateId]);
+    const [existingId] = await promisePool.query("SELECT * FROM employees WHERE employee_id = ?", [generateId]);
 
     if (existingId.length > 0) {
-      const error = new ApiError(400,"Generated Employee ID already exists. Please try again.");
+      const error = new ApiError(400, "Generated Employee ID already exists. Please try again.");
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
@@ -74,8 +74,8 @@ const userRegister = async (req, res) => {
     );
 
     if (result.affectedRows === 1) {
-      const data = {id: result.insertId, email, role,  department,  employeeId: generateId, };
-      const response = new ApiResponse(201,data,"User registered successfully!");
+      const data = { id: result.insertId, email, role, department, employeeId: generateId, };
+      const response = new ApiResponse(201, data, "User registered successfully!");
       return res.status(response.statusCode).json({
         success: response.success,
         message: response.message,
@@ -280,7 +280,7 @@ const login = async (req, res) => {
 //-------------> LOGGED OUT CONTROLLER
 
 const loggedOut = async (req, res) => {
-  
+
   try {
     if (!req.user || !req.user.employee_id) {
       return res.status(400).json({ message: "User not authenticated" });

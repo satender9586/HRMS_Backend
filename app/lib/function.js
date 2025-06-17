@@ -8,7 +8,6 @@ const getCurrentDate = () => {
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 }
 //-------------> FROMATED DATE >> 2025-04-30
@@ -17,7 +16,7 @@ const formatDate = (date) => {
 };
 
 
-//-------------> ACCESS TOKEN GENERATE FUNCTION
+//-------------> FIND DIFFERENCE BETWEEEN DATES
  const getDiffInTwoDates = (start, end)=> {
     const startDate = new Date(start);
     const endDate = new Date(end);

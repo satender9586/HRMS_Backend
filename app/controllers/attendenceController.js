@@ -1,6 +1,6 @@
 const { promisePool } = require("../config/dbConnected.js");
 const { getCurrentDate } = require("../lib/function.js");
-const cron = require('node-cron');
+
  
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -14,7 +14,6 @@ const punchIn = async (req, res) => {
       return res.status(400).json({ success: false, message: "User not authenticated" });
     }
 
-
     const userQuery = "SELECT * FROM employees WHERE employee_id = ?";
     const [userExists] = await promisePool.query(userQuery, [employee_id]);
 
@@ -24,15 +23,6 @@ const punchIn = async (req, res) => {
         message: "User doesn't exist!",
       });
     }
-
-
-    const getCurrentDate = () => {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    };
 
     const currentDate = getCurrentDate();
     const currentDay = new Date(currentDate).getDay(); 
@@ -45,11 +35,7 @@ const punchIn = async (req, res) => {
       });
     }
 
- 
-    const holidayQuery = `
-      SELECT * FROM official_holidays
-      WHERE ? BETWEEN start_date AND end_date
-    `;
+    const holidayQuery = `SELECT * FROM official_holidays WHERE ? BETWEEN start_date AND end_date`;
     const [holidayCheck] = await promisePool.query(holidayQuery, [currentDate]);
 
     if (holidayCheck.length > 0) {
@@ -61,12 +47,7 @@ const punchIn = async (req, res) => {
     }
 
 
-    const leaveQuery = `
-      SELECT * FROM employee_leaves
-      WHERE employee_id = ?
-        AND ? BETWEEN start_date AND end_date
-        AND status = 'approved'
-    `;
+    const leaveQuery = `SELECT * FROM employee_leaves WHERE employee_id = ? AND ? BETWEEN start_date AND end_date AND status = 'approved'`;
     const [leaveCheck] = await promisePool.query(leaveQuery, [employee_id, currentDate]);
 
     if (leaveCheck.length > 0) {
@@ -77,13 +58,9 @@ const punchIn = async (req, res) => {
       });
     }
 
-
-    const alreadyPunchedQuery = `
-      SELECT * FROM attendence
-      WHERE employee_id = ? AND DATE(punch_date) = ?
-    `;
+    const alreadyPunchedQuery = `SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ? `;
     const [alreadyPunched] = await promisePool.query(alreadyPunchedQuery, [employee_id, currentDate]);
-
+        console.log("insertResult",alreadyPunched)
     if (alreadyPunched.length > 0) {
       return res.status(400).json({
         success: false,
@@ -93,14 +70,9 @@ const punchIn = async (req, res) => {
       });
     }
 
-
-    const insertPunchInQuery = `
-      INSERT INTO attendence (employee_id, punch_date, punch_in)
-      VALUES (?, ?, CURRENT_TIME)
-    `;
+    const insertPunchInQuery = `INSERT INTO attendence (employee_id, punch_date, punch_in) VALUES (?, ?, CURRENT_TIME)`;
     const [insertResult] = await promisePool.query(insertPunchInQuery, [employee_id, currentDate]);
     const attendance_id = insertResult.insertId;
-
 
     const getPunchDataQuery = "SELECT * FROM attendence WHERE attendance_id = ?";
     const [punchData] = await promisePool.query(getPunchDataQuery, [attendance_id]);
@@ -129,46 +101,23 @@ const punchOut = async (req, res) => {
 
   try {
     if (!userId || !user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "employee_id missing!" });
+      return res.status(404).json({ success: false, message: "employee_id missing!" });
     }
-
-    const time = new Date();
-
-    const punchInStartTime = new Date();
-    punchInStartTime.setHours(9, 0, 0, 0);
-
-    const punchInEndTime = new Date();
-    punchInEndTime.setHours(18, 0, 0, 0);
 
     const currentDate = getCurrentDate();
 
-    const isAttendanceMakedAlready = `
-      SELECT * FROM attendence 
-      WHERE employee_id = ? AND DATE(punch_date) = ?
-    `;
-
-    const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [
-      employee_id,
-      currentDate,
-    ]);
+    const isAttendanceMakedAlready = `SELECT * FROM attendence WHERE employee_id = ? AND DATE(punch_date) = ?`;
+    const [attenderQuery] = await promisePool.query(isAttendanceMakedAlready, [employee_id,currentDate]);
 
     
     if (attenderQuery.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Attendance record not found." });
+      return res.status(404).json({ success: false, message: "Attendance record not found." });
     }
 
     const punchOutQuery = `UPDATE attendence SET punch_out = CURRENT_TIME WHERE employee_id = ? AND DATE(punch_date) = ? `;
     await promisePool.query(punchOutQuery, [employee_id, currentDate]);
 
-    const updateHoursWorkedQuery = `
-    UPDATE attendence 
-    SET hours_worked = TIMEDIFF(punch_out, punch_in) 
-    WHERE employee_id = ? AND DATE(punch_date) = ?
-  `;
+    const updateHoursWorkedQuery = `UPDATE attendence SET hours_worked = TIMEDIFF(punch_out, punch_in) WHERE employee_id = ? AND DATE(punch_date) = ?`;
     await promisePool.query(updateHoursWorkedQuery, [employee_id, currentDate]);
 
     return res.status(200).json({
@@ -199,15 +148,6 @@ const retrivePuncingstatus  = async (req, res) => {
       });
     }
 
- 
-    const getCurrentDate = () => {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    };
-
     const currentDate = getCurrentDate();
     const currentDay = new Date(currentDate).getDay(); 
 
@@ -221,11 +161,7 @@ const retrivePuncingstatus  = async (req, res) => {
       holidayType = "Weekend";
     }
 
- 
-    const holidayQuery = `
-      SELECT * FROM official_holidays
-      WHERE ? BETWEEN start_date AND end_date
-    `;
+    const holidayQuery = `SELECT * FROM official_holidays WHERE ? BETWEEN start_date AND end_date`;
     const [holidayCheck] = await promisePool.query(holidayQuery, [currentDate]);
 
     if (holidayCheck.length > 0) {
@@ -235,12 +171,7 @@ const retrivePuncingstatus  = async (req, res) => {
     }
 
 
-    const leaveQuery = `
-      SELECT * FROM employee_leaves
-      WHERE employee_id = ?
-        AND ? BETWEEN start_date AND end_date
-        AND status = 'approved'
-    `;
+    const leaveQuery = `SELECT * FROM employee_leaves WHERE employee_id = ? AND ? BETWEEN start_date AND end_date AND status = 'approved'`;
     const [leaveCheck] = await promisePool.query(leaveQuery, [employee_id, currentDate]);
 
     if (leaveCheck.length > 0) {
