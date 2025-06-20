@@ -123,6 +123,7 @@ const employeebankDetails = `CREATE TABLE IF NOT EXISTS bank_details (
 
 //-------------> EMPLOYEE DOCUMENT DETAILS CREATE QUERY
 
+
 const employeeDocumentDetails = `CREATE TABLE IF NOT EXISTS documents (
   document_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(20) NOT NULL,
@@ -133,6 +134,21 @@ const employeeDocumentDetails = `CREATE TABLE IF NOT EXISTS documents (
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
+//-------------> ANNOUNCEMENT 
+
+const annoucementDetails = `CREATE TABLE IF NOT EXISTS announcement(
+  announcement_id INT AUTO_INCREMENT PRIMARY KEY,
+  message TEXT NOT NULL,
+  date DATE,
+  create_by INT,
+  is_active BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (create_by) REFERENCES employees(user_id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)`
+
+
+
 module.exports = {
   dbCreatQuery,
   companyDepartmentTableCreateQuery,
@@ -142,8 +158,9 @@ module.exports = {
   attendenceTableCreateQuery,
   employeeLeavesTablesCreateQuery,
   employeeLeaveBalanceTableCreateQuery,
-    employeeBasicPersonalDetails,
+  employeeBasicPersonalDetails,
   employeeContactDetails,
   employeebankDetails,
   employeeDocumentDetails,
+  annoucementDetails
 };

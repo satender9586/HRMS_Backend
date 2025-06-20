@@ -3,7 +3,7 @@ const { ApiError } = require("../lib/apiError.js")
 const { ApiResponse } = require("../lib/apiResponse.js")
 const { isLeaveExistsQuery, updateExistsLeaveQuery, insertAllotedLeaveQuery, isPunchInExistsQuery, retriveAllLeavesRequestsQuery, } = require("../lib/apiQuery.js")
 const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery,retriveMyAllLeavesQuery } = require("../lib/apiQuery.js")
-const { getDiffInTwoDates,getCurrentDate } = require("../lib/function.js");
+const { getDiffInTwoDates,getCurrentDate } = require("../lib/Methods.js");
 
 
 
@@ -405,9 +405,7 @@ const LeaveAction = async (req, res) => {
         [dateDiff, employeeId, leaveType]
       );
     }
-
-
-    await promisePool.query(
+     await promisePool.query(
       `UPDATE employee_leaves SET status = ?, action_date = NOW(), action_by = ? WHERE leave_request_id = ?`,
       [selectedAction, userId, leave_request_id]
     );
@@ -432,12 +430,6 @@ const LeaveAction = async (req, res) => {
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-
-//  const employeeId = leave.employee_id;
-//       const leaveType = leave.leave_type;
-//       const dateDiff = getDiffInTwoDates(leave.start_date, leave.end_date);
-//       await promisePool.query(`UPDATE leave_balance SET used = used - ? WHERE employee_id = ? AND leave_name = ?`,
-//         [dateDiff, employeeId, leaveType]
 
 
 module.exports = {

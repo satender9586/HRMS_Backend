@@ -1,5 +1,5 @@
 const { promisePool } = require("../config/dbConnected.js");
-const { generateAccessAndRefreshToken } = require("../lib/function.js");
+const { generateAccessAndRefreshToken } = require("../lib/Methods.js");
 const { generateEmployeeId } = require("../lib/asynHandler.js");
 const { ApiError } = require("../lib/apiError.js");
 const { ApiResponse } = require("../lib/apiResponse.js");

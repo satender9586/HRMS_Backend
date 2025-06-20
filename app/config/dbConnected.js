@@ -11,7 +11,8 @@ const {
   employeeContactDetails,
   employeebankDetails,
   employeeDocumentDetails,
-  employeeLeaveBalanceTableCreateQuery
+  employeeLeaveBalanceTableCreateQuery,
+  annoucementDetails
 } = require("../helper/dbQueries.js");
 const {
   departmentInsertQuery,
@@ -68,6 +69,7 @@ async function funDb() {
     await queryAsync(employeeContactDetails);
     await queryAsync(employeebankDetails);
     await queryAsync(employeeDocumentDetails);
+    await queryAsync(annoucementDetails);
   } catch (error) {
     console.error("Error: ", error.message);
   }

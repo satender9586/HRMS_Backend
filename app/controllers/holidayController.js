@@ -1,4 +1,5 @@
 const { promisePool } = require("../config/dbConnected");
+const { ApiError } = require("../lib/apiError");
 
 const addHolidays = async (req, res) => {
   const user = req.user;
@@ -72,10 +73,7 @@ const getHolidays = async (req, res) => {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
 
-    if (role !== "Super_Admin" && role !== "Admin") {
-      const error = new ApiError(400, "You are not an admin or super admin!");
-      return res.status(error.statusCode).json({ success: false, message: error.message });
-    }
+    
 
     if (!year || isNaN(year) || year.toString().length !== 4) {
       return res.status(400).json({

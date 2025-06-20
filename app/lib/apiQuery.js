@@ -1,4 +1,3 @@
-//------------------------------------->>> leaves queries
 
 // ---------->> check leave already exista
 export const isLeaveExistsQuery = `SELECT * FROM leave_balance WHERE employee_id = ? AND leave_name = ?`;
@@ -62,7 +61,7 @@ export const retriveMyAllLeavesQuery = `
     `;
 
 
-
+//---------->>  retriveAllRequestLeavesQuery
 export  const retriveAllLeavesRequestsQuery = `
       SELECT 
         leave_request_id,
@@ -79,3 +78,5 @@ export  const retriveAllLeavesRequestsQuery = `
       FROM employee_leaves
       ORDER BY start_date DESC
     `;
+
+//---------->>  retriveAllRequestLeavesQuery

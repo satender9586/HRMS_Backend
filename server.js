@@ -17,7 +17,6 @@ const leaveRoutes = require("./app/routes/leaveRoutes.js")
 
 //-------------> CONFIG
 funDb()
-
 //-------------> MIDDLEWARE 
 
 app.use(cors()); 

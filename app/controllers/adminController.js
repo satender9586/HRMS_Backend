@@ -1,7 +1,7 @@
 const { promisePool } = require("../config/dbConnected");
 const { ApiError } = require("../lib/apiError");
 const { ApiResponse } = require("../lib/apiResponse");
-
+const { getCurrentDate,shortDates } = require("../lib/Methods.js");
 
 const makeEmployeeActiveDeactive = async (req, res) => {
   const user = req.user;
@@ -12,16 +12,6 @@ const makeEmployeeActiveDeactive = async (req, res) => {
   try {
     if (!user || !userId) {
       const error = new ApiError(400, "userId and token missing!");
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        errors: error.errors,
-        data: error.data,
-      });
-    }
-
-    if (role !== "Super_Admin" && role !== "Admin") {
-      const error = new ApiError(400, "You are not an admin or super admin!");
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
@@ -104,14 +94,6 @@ const retriveAllEmployeeList = async (req, res) => {
     });
   }
 
-  if (!["Super_Admin", "Admin"].includes(role)) {
-    return res.status(403).json({
-      success: false,
-      message:
-        "Access denied. Only admin or super admin can retrieve employee data.",
-    });
-  }
-
   try {
     const [employees] = await promisePool.query(`
       SELECT 
@@ -189,15 +171,6 @@ const retriveEmployeeProfiles = async (req, res) => {
       });
     }
 
-    // Authorization check
-    if (role !== "Super_Admin" && role !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied! Only admins allowed.",
-        data: null,
-      });
-    }
-
     if (!employeeId) {
       return res.status(400).json({
         success: false,
@@ -263,7 +236,6 @@ const retriveEmployeeProfiles = async (req, res) => {
       },
     };
 
-
     return res.status(200).json({
       success: true,
       message: "Employee profile retrieved successfully.",
@@ -278,10 +250,185 @@ const retriveEmployeeProfiles = async (req, res) => {
     });
   }
 };
+const makeAnnoucement = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const { message } = req.body;
 
+  try {
+    // Validate token
+    if (!user || !userId) {
+      const error = new ApiError(400, "userId and token missing!");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+    // Validate input
+    if (!message) {
+      const error = new ApiError(400, "Message field is missing.");
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        errors: error.errors,
+        data: error.data,
+      });
+    }
+
+    // Add announcement
+    const currDate = getCurrentDate();
+    const [result] = await promisePool.query(
+      `INSERT INTO announcement (message, date, create_by) VALUES (?, ?, ?)`,
+      [message, currDate, userId]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Announcement created successfully.",
+      data: {
+        announcement_id: result.insertId,
+        message,
+        date: currDate,
+        create_by: userId,
+      },
+    });
+  } catch (error) {
+    console.log("Something went wrong:", error);
+    const apiError = new ApiError(500, "Something went wrong!");
+    return res.status(apiError.statusCode).json({
+      success: false,
+      message: apiError.message,
+      errors: error.errors,
+      data: error.data,
+    });
+  }
+};
+const getAllAnnouncements = async (req, res) => {
+  try {
+    const [announcements] = await promisePool.query(
+      `SELECT * FROM announcement`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Announcements fetched successfully.",
+      data: announcements,
+    });
+  } catch (error) {
+    console.error("Error fetching announcements:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching announcements.",
+      data: null,
+    });
+  }
+};
+const updateAnnouncement = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const { id } = req.params;
+  const { message } = req.body;
+
+  try {
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: "Message field is required.",
+      });
+    }
+
+    const [result] = await promisePool.query(
+      `UPDATE announcement SET message = ? WHERE announcement_id = ? AND create_by = ?`,
+      [message, id, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Announcement not found or unauthorized.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Announcement updated successfully.",
+    });
+  } catch (error) {
+    console.error("Error updating announcement:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while updating.",
+    });
+  }
+};
+const deleteAnnouncement = async (req, res) => {
+  const user = req.user;
+  const userId = user?.user_id;
+  const { id } = req.params;
+
+  try {
+    const [result] = await promisePool.query(
+      `DELETE FROM announcement WHERE announcement_id = ? AND create_by = ?`,
+      [id, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Announcement not found or unauthorized.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Announcement deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Error deleting announcement:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while deleting.",
+    });
+  }
+};
+const retiveCelebration = async (req, res) => {
+  try {
+    const [birthdays] = await promisePool.query(`
+      SELECT 
+        CONCAT(first_name, ' ', last_name) AS name,
+        DATE_FORMAT(date_of_birth, '%Y-%m-%d') AS celebration_date,
+        'Birthday' AS type
+      FROM personal_details
+    `);
+
+    const dataAfterSort = shortDates(birthdays)
+    return res.status(200).json({
+      success: true,
+      message: "Birthdays sorted by month and day",
+      data:dataAfterSort,
+    });
+    
+  } catch (error) {
+    console.error("Error fetching birthdays:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching birthdays.",
+      error: error.message,
+      data: null,
+    });
+  }
+};
 
 module.exports = {
   makeEmployeeActiveDeactive,
   retriveAllEmployeeList,
   retriveEmployeeProfiles,
+  makeAnnoucement,
+  getAllAnnouncements,
+  updateAnnouncement,
+  deleteAnnouncement,
+  retiveCelebration,
 };

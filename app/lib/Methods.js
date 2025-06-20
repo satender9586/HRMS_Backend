@@ -15,7 +15,6 @@ const formatDate = (date) => {
   return date.toISOString().split('T')[0]; 
 };
 
-
 //-------------> FIND DIFFERENCE BETWEEEN DATES
  const getDiffInTwoDates = (start, end)=> {
     const startDate = new Date(start);
@@ -24,7 +23,6 @@ const formatDate = (date) => {
     const diffInDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))+1;
     return diffInDays;
 };
-
 
 //-------------> ACCESS TOKEN GENERATE FUNCTION
 const accessTokenGenerate = async (data) => {
@@ -56,7 +54,19 @@ const generateAccessAndRefreshToken =  async (paramObj)=>{
   }
 }
 
-//-------------> REFRESH TOKEN GENERATE FUNCTION
+//-------------> short data bases on array 
+
+const shortDates = (data) => {
+  return data.sort((a, b) => {
+    const aDate = new Date(a.celebration_date);
+    const bDate = new Date(b.celebration_date);
+    const aMonthDay = (aDate.getMonth() + 1).toString().padStart(2, '0') +
+                      aDate.getDate().toString().padStart(2, '0');
+    const bMonthDay = (bDate.getMonth() + 1).toString().padStart(2, '0') +
+                      bDate.getDate().toString().padStart(2, '0');
+    return aMonthDay.localeCompare(bMonthDay);
+  });
+};
 
 
-module.exports = { getCurrentDate,formatDate,generateAccessAndRefreshToken,getDiffInTwoDates };
+module.exports = { getCurrentDate,formatDate,generateAccessAndRefreshToken,getDiffInTwoDates,shortDates };
