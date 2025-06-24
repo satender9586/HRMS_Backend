@@ -1,7 +1,7 @@
 const { promisePool } = require("../config/dbConnected");
 const { ApiError } = require("../lib/apiError");
 const { ApiResponse } = require("../lib/apiResponse");
-const { getCurrentDate,shortDates } = require("../lib/Methods.js");
+const { getCurrentDate, shortDates } = require("../lib/Methods.js");
 
 const makeEmployeeActiveDeactive = async (req, res) => {
   const user = req.user;
@@ -408,9 +408,9 @@ const retiveCelebration = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Birthdays sorted by month and day",
-      data:dataAfterSort,
+      data: dataAfterSort,
     });
-    
+
   } catch (error) {
     console.error("Error fetching birthdays:", error);
     return res.status(500).json({
@@ -421,6 +421,91 @@ const retiveCelebration = async (req, res) => {
     });
   }
 };
+const generateBasicSummary = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+
+  if (!user || !userId) {
+    const error = new ApiError(400, "userId and token missing!");
+    return res.status(error.statusCode).json({
+      success: false,
+      message: error.message,
+      errors: error.errors,
+      data: error.data,
+    });
+  }
+
+  try {
+    const today = getCurrentDate(); 
+
+    const isWeekend = [0, 6].includes(new Date(today).getDay()); 
+    const [[{ isHoliday }]] = await promisePool.query(`
+      SELECT COUNT(*) AS isHoliday FROM official_holidays WHERE start_date <= ? AND end_date >= ?
+    `, [today, today]);
+
+    if (isWeekend || isHoliday > 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Today is a weekend or holiday. No summary applicable.",
+        data: {
+          totalEmployees: 0,
+          totalPresent: 0,
+          totalLeave: 0,
+          totalLeaveRequest: 0,
+          totalAbsent: 0,
+        },
+      });
+    }
+
+     const [[{ totalEmployees }]] = await promisePool.query(`
+      SELECT COUNT(*) AS totalEmployees FROM employees
+    `);
+
+    // Total Present Today
+    const [[{ totalPresent }]] = await promisePool.query(`
+      SELECT COUNT(DISTINCT employee_id) AS totalPresent
+      FROM attendence 
+      WHERE status = 'Present' AND DATE(punch_date) = ?
+    `, [today]);
+
+    // Total Approved Leaves Today
+    const [[{ totalLeave }]] = await promisePool.query(`
+      SELECT COUNT(DISTINCT employee_id) AS totalLeave
+      FROM employee_leaves
+      WHERE status = 'approved' AND ? BETWEEN start_date AND end_date
+    `, [today]);
+
+  
+    const [[{ totalLeaveRequest }]] = await promisePool.query(`
+      SELECT COUNT(*) AS totalLeaveRequest
+      FROM employee_leaves
+      WHERE status = 'pending'
+    `);
+
+    const totalAbsent = totalEmployees - (totalPresent + totalLeave);
+    return res.status(200).json({
+      success: true,
+      message: "Summary generated successfully",
+      data: {
+        totalEmployees,
+        totalPresent,
+        totalLeave,
+        totalLeaveRequest,
+        totalAbsent,
+      },
+    });
+
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while generating summary.",
+      error: error.message,
+    });
+  }
+};
+
+
 
 module.exports = {
   makeEmployeeActiveDeactive,
@@ -431,4 +516,5 @@ module.exports = {
   updateAnnouncement,
   deleteAnnouncement,
   retiveCelebration,
+  generateBasicSummary
 };

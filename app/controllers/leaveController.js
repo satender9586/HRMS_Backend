@@ -2,8 +2,8 @@ const { promisePool } = require("../config/dbConnected.js");
 const { ApiError } = require("../lib/apiError.js")
 const { ApiResponse } = require("../lib/apiResponse.js")
 const { isLeaveExistsQuery, updateExistsLeaveQuery, insertAllotedLeaveQuery, isPunchInExistsQuery, retriveAllLeavesRequestsQuery, } = require("../lib/apiQuery.js")
-const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery,retriveMyAllLeavesQuery } = require("../lib/apiQuery.js")
-const { getDiffInTwoDates,getCurrentDate } = require("../lib/Methods.js");
+const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery, retriveMyAllLeavesQuery } = require("../lib/apiQuery.js")
+const { getDiffInTwoDates, getCurrentDate } = require("../lib/Methods.js");
 
 
 
@@ -133,7 +133,7 @@ const leaveRequest = async (req, res) => {
   const { leave_type, start_date, end_date, reason } = req.body;
 
   try {
- 
+
     if (!user || !leave_type || !start_date || !end_date || !reason) {
       const error = new ApiError(400, "Missing required fields: leave_type, start_date, end_date, reason.");
       return res.status(error.statusCode).json({ success: false, message: error.message });
@@ -147,7 +147,7 @@ const leaveRequest = async (req, res) => {
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
-   
+
     if (end < start) {
       const error = new ApiError(400, "End date cannot be earlier than start date.");
       return res.status(error.statusCode).json({ success: false, message: error.message });
@@ -159,16 +159,16 @@ const leaveRequest = async (req, res) => {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
 
-  
+
     if (start <= today && end >= today) {
-      const [alreadyPunchedToday] = await promisePool.query(isPunchInExistsQuery, [employee_id,currentData]);
+      const [alreadyPunchedToday] = await promisePool.query(isPunchInExistsQuery, [employee_id, currentData]);
       if (alreadyPunchedToday.length > 0) {
         const error = new ApiError(400, "You have already punched in today. Leave cannot include today.");
         return res.status(error.statusCode).json({ success: false, message: error.message });
       }
     }
-   
-    const leaveOverlapParams = [employee_id, start_date, end_date,start_date, end_date, start_date, end_date];
+
+    const leaveOverlapParams = [employee_id, start_date, end_date, start_date, end_date, start_date, end_date];
     const [overlappingLeaves] = await promisePool.query(leaveOverlapQuery, leaveOverlapParams);
 
     if (overlappingLeaves.length > 0) {
@@ -188,7 +188,7 @@ const leaveRequest = async (req, res) => {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
 
-   
+
     const [leaveBalanceCheck] = await promisePool.query('SELECT * FROM leave_balance WHERE employee_id = ? AND leave_name = ?',
       [employee_id, leave_type]
     );
@@ -205,10 +205,10 @@ const leaveRequest = async (req, res) => {
       return res.status(error.statusCode).json({ success: false, message: error.message });
     }
 
- 
-    await promisePool.query('UPDATE leave_balance SET used = used + ? WHERE employee_id = ? AND leave_name = ?',[dateDiff, employee_id, leave_type]);
 
-    const [result] = await promisePool.query(insertLeaveQuery, [employee_id, leave_type, start_date, end_date, reason,currentData]);
+    await promisePool.query('UPDATE leave_balance SET used = used + ? WHERE employee_id = ? AND leave_name = ?', [dateDiff, employee_id, leave_type]);
+
+    const [result] = await promisePool.query(insertLeaveQuery, [employee_id, leave_type, start_date, end_date, reason, currentData]);
 
     const response = new ApiResponse(200, result.insertId, "Leave request submitted successfully.");
     return res.status(response.statusCode).json({
@@ -235,7 +235,7 @@ const retriveMyAllLeaves = async (req, res) => {
   const employee_id = req.user?.employee_id;
 
   try {
-  
+
     if (!user || !userId) {
       const errors = new ApiError(400, "Missing user data: user, userId anauthorised!");
       return res.status(errors.statusCode).json({
@@ -380,7 +380,7 @@ const LeaveAction = async (req, res) => {
       });
     }
 
- 
+
     if (leaveStatus === "approved" && selectedAction === "cancelled") {
       return res.status(400).json({
         success: false,
@@ -388,7 +388,7 @@ const LeaveAction = async (req, res) => {
       });
     }
 
- 
+
     if (selectedAction === "cancelled" && currentDate > leaveEndDate) {
       return res.status(400).json({
         success: false,
@@ -399,13 +399,13 @@ const LeaveAction = async (req, res) => {
     if (leaveStatus === "pending" && selectedAction === "cancelled") {
       const employeeId = leave.employee_id;
       const leaveType = leave.leave_type;
-      const dateDiff = getDiffInTwoDates(leave.start_date, leave.end_date); 
+      const dateDiff = getDiffInTwoDates(leave.start_date, leave.end_date);
       await promisePool.query(
         `UPDATE leave_balance SET used = used - ? WHERE employee_id = ? AND leave_name = ?`,
         [dateDiff, employeeId, leaveType]
       );
     }
-     await promisePool.query(
+    await promisePool.query(
       `UPDATE employee_leaves SET status = ?, action_date = NOW(), action_by = ? WHERE leave_request_id = ?`,
       [selectedAction, userId, leave_request_id]
     );
@@ -426,9 +426,29 @@ const LeaveAction = async (req, res) => {
   }
 };
 
-
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// not completed
+const listAllLeaveRequest = async (req, res) => {
+  const user = req.user;
+  const userId = req.user?.user_id;
+  try {
+    if (!user || !userId) {
+      const errors = new ApiError(404, "UserId and token are missing!");
+      return res.status(errors.statusCode).json({
+        success: false,
+        message: errors.message,
+        errors: errors.errors,
+        data: errors.data,
+      });
+    }
+
+    // retrive all leave request ;
+    const [retriveLeaves]= await promisePool.query("SELECT * FROM employee_leaves WHERE status = `pending`")
+ 
+  } catch (error) {
+
+  }
+}
 
 
 
@@ -438,6 +458,7 @@ module.exports = {
   retriveMyAllLeaves,
   listAllLeaveApplications,
   allocateLeaves,
-  allocatedLeaveSummary
+  allocatedLeaveSummary,
+  listAllLeaveRequest
 };
 

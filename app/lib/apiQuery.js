@@ -79,4 +79,19 @@ export  const retriveAllLeavesRequestsQuery = `
       ORDER BY start_date DESC
     `;
 
-//---------->>  retriveAllRequestLeavesQuery
+//---------->>  check today holidy
+
+export const checkTodayHoliday = `SELECT COUNT(*) AS isHoliday FROM official_holidays WHERE start_date <= ? AND end_date >= ?`
+
+
+//---------->>  total employee
+
+export const countEmployee = `SELECT COUNT(*) AS totalEmployees FROM employees`
+
+//---------->>  total present
+
+export const countPresent = `
+      SELECT COUNT(DISTINCT employee_id) AS totalPresent
+      FROM attendence 
+      WHERE status = 'Present' AND DATE(punch_date) = ?
+    `
