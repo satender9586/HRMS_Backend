@@ -11,7 +11,8 @@ const {
   employeeContactDetails,
   employeebankDetails,
   employeeDocumentDetails,
-  leaveBalaceTablesCreateQuery
+  employeeLeaveBalanceTableCreateQuery,
+  annoucementDetails
 } = require("../helper/dbQueries.js");
 const {
   departmentInsertQuery,
@@ -27,6 +28,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  dateStrings: true,
 });
 
 const promisePool = pool.promise();
@@ -62,11 +64,12 @@ async function funDb() {
     await queryAsync(employeesTableCreateQuery);
     await queryAsync(attendenceTableCreateQuery);
     await queryAsync(employeeLeavesTablesCreateQuery);
-    // await queryAsync(leaveBalaceTablesCreateQuery);
+    await queryAsync(employeeLeaveBalanceTableCreateQuery);
     await queryAsync(employeeBasicPersonalDetails);
     await queryAsync(employeeContactDetails);
     await queryAsync(employeebankDetails);
     await queryAsync(employeeDocumentDetails);
+    await queryAsync(annoucementDetails);
   } catch (error) {
     console.error("Error: ", error.message);
   }

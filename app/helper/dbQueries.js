@@ -5,22 +5,19 @@ const dbCreatQuery = "CREATE DATABASE IF NOT EXISTS HRMS";
 const companyDepartmentTableCreateQuery = `CREATE TABLE IF NOT EXISTS company_departments (
    department_id ENUM('Super_Admin','Admin', 'HR','IT', 'Sales', 'Digital_Marketing','Finance') PRIMARY KEY,
    department_name VARCHAR(255) NOT NULL UNIQUE,
-   description VARCHAR(255) NOT NULL,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+   description VARCHAR(255) NOT NULL
 )`;
 
-
-
 //-------------> EMPLOYEE ROLES CREATE QUERY
+
 const employeeRolesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employee_roles (
    role_id ENUM('Super_Admin', 'Admin', 'Employee') PRIMARY KEY,
    role_name VARCHAR(255) NOT NULL,
    description VARCHAR(255) NOT NULL
 )`;
 
-
 //-------------> OFFICIAL HOLIDAY CREATE QUERY
+
 const officialHolidayTableCreateQuery = `CREATE TABLE IF NOT EXISTS official_holidays(
   holiday_id INT AUTO_INCREMENT PRIMARY KEY,
   holiday_name VARCHAR(100),
@@ -43,8 +40,7 @@ const employeesTableCreateQuery = `CREATE TABLE IF NOT EXISTS employees (
   FOREIGN KEY (role) REFERENCES employee_roles(role_id)
 )`;
 
-
-//-------------> ATTENDANCE TABLE CREATE QUERY (Fix Foreign Key)
+//-------------> ATTENDANCE TABLE CREATE QUERY
 const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   attendance_id INT PRIMARY KEY AUTO_INCREMENT,
   employee_id VARCHAR(20) NOT NULL,
@@ -58,33 +54,33 @@ const attendenceTableCreateQuery = `CREATE TABLE IF NOT EXISTS attendence (
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
-//-------------> EMPLOYEE LEAVE BALANCE
-const leaveBalaceTablesCreateQuery = `CREATE TABLE leave_balance (
-    employee_id VARCHAR(20),
-    leave_type ENUM('Sick', 'Casual', 'Paid', 'Unpaid'),
-    year YEAR,
-    total_allocated INT DEFAULT 0,
-    used INT DEFAULT 0,
-    remaining INT GENERATED ALWAYS AS (total_allocated - used) STORED,
-    PRIMARY KEY (employee_id, leave_type, year)
-);
-`
+//-------------> EMPLOYEE LEAVES TABLE CREATE QUERY
+const employeeLeaveBalanceTableCreateQuery = `CREATE TABLE IF NOT EXISTS leave_balance (
+  leave_balance_id INT NOT NULL AUTO_INCREMENT,
+  employee_id VARCHAR(20) NOT NULL,
+  leave_name ENUM('sick', 'casual', 'unpaid') DEFAULT 'sick',
+  total INT NOT NULL,
+  used INT NOT NULL DEFAULT 0,
+  remaining INT GENERATED ALWAYS AS (total - used) STORED,
+  PRIMARY KEY (leave_balance_id),
+  FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
+)`;
 
-//-------------> EMPLOYEE LEAVES TABLE CREATE QUERY 
+//-------------> EMPLOYEE LEAVES TABLE CREATE QUERY
 const employeeLeavesTablesCreateQuery = `CREATE TABLE IF NOT EXISTS employee_leaves(
-    leave_request_id INT AUTO_INCREMENT PRIMARY KEY,            
-    employee_id VARCHAR(20) NOT NULL,                                 
-    start_date DATE NOT NULL,                           
-    end_date DATE NOT NULL,                           
-    status ENUM('pending', 'approved', 'rejected','cancelled') DEFAULT 'pending',
-    request_date DATETIME DEFAULT CURRENT_TIMESTAMP,    
-    action_date DATETIME,                                                          
-    action_by INT, 
-    leave_type ENUM('Sick', 'Casual', 'Paid', 'Unpaid'),                                                                  
-    reason TEXT,   
-    remark VARCHAR(200),                                      
-    FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
-    FOREIGN KEY (action_by) REFERENCES employees(user_id) ON DELETE SET NULL
+  leave_request_id INT AUTO_INCREMENT PRIMARY KEY,            
+  employee_id VARCHAR(20) NOT NULL,                                 
+  start_date DATE NOT NULL,                           
+  end_date DATE NOT NULL,                           
+  status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
+  request_date DATE,
+  action_date DATE,                                                          
+  action_by INT, 
+  leave_type ENUM('sick', 'casual', 'unpaid'),                                                                  
+  reason TEXT,   
+  remark VARCHAR(200),                                      
+  FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
+  FOREIGN KEY (action_by) REFERENCES employees(user_id) ON DELETE SET NULL
 )`;
 
 //-------------> EMPLOYEE BASIC PERSONAL DETAILS CREATE QUERY (Fix Foreign Key)
@@ -100,7 +96,8 @@ const employeeBasicPersonalDetails = `CREATE TABLE IF NOT EXISTS personal_detail
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
-//-------------> EMPLOYEE CONTACT DETAILS CREATE QUERY (Fix Foreign Key)
+//-------------> EMPLOYEE CONTACT DETAILS CREATE QUERY 
+
 const employeeContactDetails = `CREATE TABLE IF NOT EXISTS contact_details(
   contact_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(20) NOT NULL,
@@ -111,7 +108,8 @@ const employeeContactDetails = `CREATE TABLE IF NOT EXISTS contact_details(
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
-//-------------> EMPLOYEE BANK DETAILS CREATE QUERY (Fix Foreign Key)
+//-------------> EMPLOYEE BANK DETAILS CREATE QUERY 
+
 const employeebankDetails = `CREATE TABLE IF NOT EXISTS bank_details (
   bank_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(20) NOT NULL,
@@ -123,8 +121,10 @@ const employeebankDetails = `CREATE TABLE IF NOT EXISTS bank_details (
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
-//-------------> EMPLOYEE DOCUMENT DETAILS CREATE QUERY (Fix Foreign Key)
-const employeeDocumentDetails =`CREATE TABLE IF NOT EXISTS documents (
+//-------------> EMPLOYEE DOCUMENT DETAILS CREATE QUERY
+
+
+const employeeDocumentDetails = `CREATE TABLE IF NOT EXISTS documents (
   document_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(20) NOT NULL,
   resume LONGBLOB,
@@ -134,6 +134,21 @@ const employeeDocumentDetails =`CREATE TABLE IF NOT EXISTS documents (
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 )`;
 
+//-------------> ANNOUNCEMENT 
+
+const annoucementDetails = `CREATE TABLE IF NOT EXISTS announcement(
+  announcement_id INT AUTO_INCREMENT PRIMARY KEY,
+  message TEXT NOT NULL,
+  date DATE,
+  create_by INT,
+  is_active BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (create_by) REFERENCES employees(user_id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)`
+
+
+
 module.exports = {
   dbCreatQuery,
   companyDepartmentTableCreateQuery,
@@ -142,9 +157,10 @@ module.exports = {
   employeesTableCreateQuery,
   attendenceTableCreateQuery,
   employeeLeavesTablesCreateQuery,
+  employeeLeaveBalanceTableCreateQuery,
   employeeBasicPersonalDetails,
   employeeContactDetails,
   employeebankDetails,
   employeeDocumentDetails,
-  leaveBalaceTablesCreateQuery
+  annoucementDetails
 };

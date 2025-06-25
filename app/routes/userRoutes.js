@@ -7,7 +7,6 @@ const { verifyToken } = require("../middleware/authMiddleware.js")
 //-------------->>> new user registraion  routes 
 routes.post("/register",userRegister)
 
-
 //-------------->>> add complete profile 
 routes.post("/completeProfile",verifyToken,addOrUpdateEmployeeFullDetails)
 
