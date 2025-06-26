@@ -2,7 +2,7 @@ const { promisePool } = require("../config/dbConnected.js");
 const { ApiError } = require("../lib/apiError.js")
 const { ApiResponse } = require("../lib/apiResponse.js")
 const { isLeaveExistsQuery, updateExistsLeaveQuery, insertAllotedLeaveQuery, isPunchInExistsQuery, retriveAllLeavesRequestsQuery, } = require("../lib/apiQuery.js")
-const { checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery, retriveMyAllLeavesQuery } = require("../lib/apiQuery.js")
+const {retiveLeavesByStatus, checkUserExistsQuery, leaveOverlapQuery, pendingLeaveQuery, insertLeaveQuery, retriveMyAllLeavesQuery } = require("../lib/apiQuery.js")
 const { getDiffInTwoDates, getCurrentDate } = require("../lib/Methods.js");
 
 
@@ -427,11 +427,13 @@ const LeaveAction = async (req, res) => {
 };
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// not completed
-const listAllLeaveRequest = async (req, res) => {
+
+const fetchLeavesByStatus = async (req, res) => {
   const user = req.user;
   const userId = req.user?.user_id;
+
   try {
+    // Validate user and user ID
     if (!user || !userId) {
       const errors = new ApiError(404, "UserId and token are missing!");
       return res.status(errors.statusCode).json({
@@ -441,14 +443,23 @@ const listAllLeaveRequest = async (req, res) => {
         data: errors.data,
       });
     }
+    const [retriveLeaves] = await promisePool.query(retiveLeavesByStatus,['pending']);
+    return res.status(200).json({
+      success: true,
+      message: "Pending leave requests fetched successfully.",
+      data: retriveLeaves,
+    });
 
-    // retrive all leave request ;
-    const [retriveLeaves]= await promisePool.query("SELECT * FROM employee_leaves WHERE status = `pending`")
- 
   } catch (error) {
-
+    console.error("Error retrieving leave requests:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while retrieving leave requests.",
+      error: error.message,
+    });
   }
-}
+};
+
 
 
 
@@ -459,6 +470,6 @@ module.exports = {
   listAllLeaveApplications,
   allocateLeaves,
   allocatedLeaveSummary,
-  listAllLeaveRequest
+  fetchLeavesByStatus
 };
 

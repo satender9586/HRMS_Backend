@@ -60,8 +60,28 @@ export const retriveMyAllLeavesQuery = `
       ORDER BY start_date DESC
     `;
 
+//---------->>  retriveAllRequestLeavesQuery
+export const retiveLeavesByStatus =       `
+          SELECT 
+        leave_request_id,
+        employee_id,
+        start_date,
+        end_date,
+        status,
+        request_date,
+        action_date,
+        action_by,
+        leave_type,
+        reason,
+        remark,
+        DATEDIFF(end_date, start_date) + 1 AS total_days
+      FROM employee_leaves
+      WHERE status = ?
+      ORDER BY start_date DESC
+      `
 
 //---------->>  retriveAllRequestLeavesQuery
+
 export  const retriveAllLeavesRequestsQuery = `
       SELECT 
         leave_request_id,
